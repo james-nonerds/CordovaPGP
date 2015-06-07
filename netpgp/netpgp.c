@@ -448,7 +448,7 @@ static int
 appendkey(pgp_io_t *io, pgp_key_t *key, char *ringfile)
 {
 	pgp_output_t	*create;
-	const unsigned	 noarmor = 0;
+	const unsigned	 armor = 1;
 	int		 fd;
 
 	if ((fd = pgp_setup_file_append(&create, ringfile)) < 0) {
@@ -458,7 +458,7 @@ appendkey(pgp_io_t *io, pgp_key_t *key, char *ringfile)
 		(void) fprintf(io->errs, "can't open pubring '%s'\n", ringfile);
 		return 0;
 	}
-	if (!pgp_write_xfer_pubkey(create, key, noarmor)) {
+	if (!pgp_write_xfer_pubkey(create, key, armor)) {
 		(void) fprintf(io->errs, "Cannot write pubkey\n");
 		return 0;
 	}
@@ -1172,7 +1172,7 @@ int
 netpgp_generate_key(netpgp_t *netpgp, char *id, int numbits)
 {
 	pgp_output_t		*create;
-	const unsigned		 noarmor = 0;
+	const unsigned		 armor = 1;
 	pgp_key_t		*key;
 	pgp_io_t		*io;
 	uint8_t			*uid;
@@ -1241,7 +1241,7 @@ netpgp_generate_key(netpgp_t *netpgp, char *id, int numbits)
 		attempts = INFINITE_ATTEMPTS;
 	}
 	passc = find_passphrase(netpgp->passfp, &cp[ID_OFFSET], passphrase, sizeof(passphrase), attempts);
-	if (!pgp_write_xfer_seckey(create, key, (uint8_t *)passphrase, (const unsigned)passc, noarmor)) {
+	if (!pgp_write_xfer_seckey(create, key, (uint8_t *)passphrase, (const unsigned)passc, armor)) {
 		(void) fprintf(io->errs, "Cannot write seckey\n");
 		return 0;
 	}

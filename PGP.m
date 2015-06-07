@@ -9,7 +9,17 @@
 #import <netpgp.h>
 #import "PGP.h"
 
+typedef NS_ENUM(NSUInteger, PGPKeytype) {
+    PGPKeytypePrivate,
+    PGPKeytypePublic
+};
+
+static NSString *const PGPPubringFilename = @"pubring.gpg";
+static NSString *const PGPSecringFilename = @"secring.gpg";
+
 static NSString *_homedir = nil;
+static NSString *_secring = nil;
+static NSString *_pubring = nil;
 
 #pragma mark - Helper functions
 
@@ -32,10 +42,11 @@ void dispatch_to_main(void (^block)()) {
 + (netpgp_t *)initNetPGP;
 + (void)endNetPGP:(netpgp_t *)netpgp;
 
-+ (NSString *)homedir;
++ (NSString *)loadKeyWithType:(PGPKeytype)type forUserId:(NSString *)userId;
 
-+ (NSString *)generateTemporaryKeyId;
-+ (NSString *)pathForKeyId:(NSString *)keyId;
++ (NSString *)homedirPath;
++ (NSString *)pubringPath;
++ (NSString *)secringPath;
 
 + (NSError *)errorWithCause:(NSString *)cause;
 
@@ -58,7 +69,6 @@ void dispatch_to_main(void (^block)()) {
  * @return {Promise<Object>} {key: module:key~Key, privateKeyArmored: String, publicKeyArmored: String}
  * @static
  */
-
 + (void)generateKeypairWithOptions:(NSDictionary *)options
                       onCompletion:(void(^)(NSDictionary *result))onCompletion
                            onError:(void(^)(NSError *error))onError {
@@ -95,36 +105,21 @@ void dispatch_to_main(void (^block)()) {
                 return;
             }
             
-            char *generated_id = netpgp_getvar(netpgp, "generated userid");
+            // Get the generated ID from the keys:
+            NSString *generatedId = [NSString stringWithUTF8String:netpgp_getvar(netpgp, "generated userid")];
             
-            NSString *generatedId = [NSString stringWithUTF8String:generated_id];
-            NSString *keyFile = [generatedId stringByAppendingPathComponent:@"secring.gpg"];
-            NSString *path = [[self homedir] stringByAppendingPathComponent:keyFile];
+            NSError *error;
             
-            netpgp_import_key(netpgp, (char *) path.UTF8String);
+            NSString *publicKey = [self loadKeyWithType:PGPKeytypePublic forUserId:generatedId error:&error];
+            if (error) dispatch_to_main(^{onError(error);});
             
-            // Export the key:
-            char *key_data = netpgp_export_key(netpgp, keyName);
-            NSString *keyString;
+            NSString *privateKey = [self loadKeyWithType:PGPKeytypePrivate forUserId:generatedId error:&error];
+            if (error) dispatch_to_main(^{onError(error);});
             
-            if (!key_data) {
-                // Could't find the key:
-                dispatch_to_main(^{
-                    onError([self errorWithCause:@"Couldn't find generated key."]);
-                });
-                
-                [self endNetPGP:netpgp];
-                return;
-                
-            } else {
-                keyString = [NSString stringWithCString:key_data encoding:NSASCIIStringEncoding];
-                free(key_data);
-            }
-        
             dispatch_to_main(^{
-                onCompletion(nil);
+                onCompletion(@{@"privateKeyArmored": privateKey,
+                               @"publicKeyArmored": publicKey});
             });
-            
         } else {
             dispatch_to_main(^{
                 onError([self errorWithCause:@"netpgp failed to init"]);
@@ -133,6 +128,23 @@ void dispatch_to_main(void (^block)()) {
         
         [self endNetPGP:netpgp];
     });
+}
+
++ (NSString *)loadKeyWithType:(PGPKeytype)type forUserId:(NSString *)userId error:(NSError **)error {
+    NSString *keyDirectory = [[self homedirPath] stringByAppendingPathComponent:userId];
+    NSString *keyPath;
+    
+    switch (type) {
+        case PGPKeytypePublic:
+            keyPath = [keyDirectory stringByAppendingPathComponent:PGPPubringFilename];
+            break;
+            
+        case PGPKeytypePrivate:
+            keyPath = [keyDirectory stringByAppendingPathComponent:PGPSecringFilename];
+            break;
+    }
+    
+    return [NSString stringWithContentsOfFile:keyPath encoding:NSUTF8StringEncoding error:error];
 }
 
 + (void)convertKeyToASCIIArmor:(NSString *)key onCompletion:(void (^)(NSString *))onCompletion {
@@ -158,7 +170,9 @@ void dispatch_to_main(void (^block)()) {
     netpgp_t *netpgp = (netpgp_t *) calloc(1, sizeof(netpgp_t));
     
     // Set the secret key ring path:
-    netpgp_set_homedir(netpgp, (char *) [self homedir].UTF8String, NULL, 0);
+    netpgp_set_homedir(netpgp, (char *) [self homedirPath].UTF8String, NULL, 0);
+    netpgp_setvar(netpgp, "pubring", (char *) [self pubringPath].UTF8String);
+    netpgp_setvar(netpgp, "secring", (char *) [self secringPath].UTF8String);
     
     // User 4MB page for memory file:
     netpgp_setvar(netpgp, "max mem alloc", "4194304");
@@ -183,31 +197,8 @@ void dispatch_to_main(void (^block)()) {
     }
 }
 
-+ (NSString *)homedir {
-    static dispatch_once_t once_token;
-    
-    dispatch_once(&once_token, ^{
-        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-        NSString *documentDirectoryPath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
-        
-#if TARGET_IPHONE_SIMULATOR
-        if (![[NSFileManager defaultManager] fileExistsAtPath:documentDirectoryPath]) {
-            [[NSFileManager defaultManager] createDirectoryAtPath:documentDirectoryPath withIntermediateDirectories:YES attributes:nil error:nil];
-        }
-#endif
-        
-        _homedir = documentDirectoryPath;
-    });
-    
-    return _homedir;
-}
-
-+ (NSString *)generateTemporaryKeyId {
-    return [NSUUID UUID].UUIDString;
-}
-
 + (NSString *)pathForKeyId:(NSString *)keyId {
-    return [[self homedir] stringByAppendingPathComponent:keyId];
+    return [[self homedirPath] stringByAppendingPathComponent:keyId];
 }
 
 + (NSError *)errorWithCause:(NSString *)cause {
@@ -216,5 +207,58 @@ void dispatch_to_main(void (^block)()) {
                            userInfo:@{@"reason": cause}];
 }
 
++ (NSString *)homedirPath {
+    static dispatch_once_t once_token;
+    
+    dispatch_once(&once_token, ^{
+        // Don't save keys, make sure we remove the last '/':
+        NSURL *temporaryUrl = [NSURL fileURLWithPath:NSTemporaryDirectory()];
+        NSString *homedir = [temporaryUrl.path stringByAppendingPathComponent:@"keys"];
+        
+        if (![[NSFileManager defaultManager] fileExistsAtPath:homedir]) {
+            [[NSFileManager defaultManager] createDirectoryAtPath:homedir withIntermediateDirectories:YES attributes:nil error:nil];
+        }
+        
+        _homedir = homedir;
+    });
+    
+    return _homedir;
+}
+
++ (NSString *)secringPath {
+    static dispatch_once_t once_token;
+    
+    dispatch_once(&once_token, ^{
+        NSString *secring = [[self homedirPath] stringByAppendingPathComponent:PGPSecringFilename];
+        
+        if (![[NSFileManager defaultManager] fileExistsAtPath:secring]) {
+            [[NSFileManager defaultManager] createFileAtPath:secring
+                                                    contents:nil
+                                                  attributes:@{NSFilePosixPermissions: [NSNumber numberWithShort:0600]}];
+        }
+        
+        _secring = secring;
+    });
+    
+    return _secring;
+}
+
++ (NSString *)pubringPath {
+    static dispatch_once_t once_token;
+    
+    dispatch_once(&once_token, ^{
+        NSString *pubring = [[self homedirPath] stringByAppendingPathComponent:PGPPubringFilename];
+        
+        if (![[NSFileManager defaultManager] fileExistsAtPath:pubring]) {
+            [[NSFileManager defaultManager] createFileAtPath:pubring
+                                                    contents:nil
+                                                  attributes:@{NSFilePosixPermissions: [NSNumber numberWithShort:0600]}];
+        }
+        
+        _pubring = pubring;
+    });
+    
+    return _pubring;
+}
 
 @end

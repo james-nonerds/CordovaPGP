@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>EC384D7D-A578-47D7-800A-837E78B747DB</string>
+	<key>IDESourceControlProjectName</key>
+	<string>PGP Demo</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>3224A5925A19C34C5ADC7171A5A0B8939A6BC1EE</key>
+		<string>https://github.com/jknightco/CordovaPGP.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>PGP Demo.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>3224A5925A19C34C5ADC7171A5A0B8939A6BC1EE</key>
+		<string>..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/jknightco/CordovaPGP.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>3224A5925A19C34C5ADC7171A5A0B8939A6BC1EE</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>3224A5925A19C34C5ADC7171A5A0B8939A6BC1EE</string>
+			<key>IDESourceControlWCCName</key>
+			<string>PGP%20Library</string>
+		</dict>
+	</array>
+</dict>
+</plist>
