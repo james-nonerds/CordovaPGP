@@ -1,54 +1,58 @@
 //
-//  HPPGP.m
-//  iOS PGP
+//  NetPGP.m
+//  PGP Demo
 //
-//  Created by James Knight on 6/3/15.
+//  Created by James Knight on 6/9/15.
 //  Copyright (c) 2015 Gradient. All rights reserved.
 //
 
 #import <netpgp.h>
 #import "PGP.h"
 
-typedef NS_ENUM(NSUInteger, PGPKeytype) {
-    PGPKeytypePrivate,
-    PGPKeytypePublic
-};
+#pragma mark - Constants
 
-static NSString *const PGPPubringFilename = @"pubring.gpg";
-static NSString *const PGPSecringFilename = @"secring.gpg";
+#define DEFAULT_HASH_ALG "SHA256"
+#define DEFAULT_MEMORY_SIZE "4194304"
+#define DEFAULT_BIT_COUNT 1024
+#define DEFAULT_KEY_TYPE 1
 
-static NSString *_homedir = nil;
-static NSString *_secring = nil;
-static NSString *_pubring = nil;
+#define SHOULD_ARMOR 1
 
-#pragma mark - Helper functions
+NSString *const PGPOptionKeyType = @"keyType";
+NSString *const PGPOptionNumBits = @"numBits";
+NSString *const PGPOptionUserId = @"userId";
+NSString *const PGPOptionUnlocked = @"unlocked";
 
-dispatch_queue_t getBackgroundQueue() {
-    return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0);
-}
+NSString *const PGPPubringFilename = @"pubring.gpg";
+NSString *const PGPSecringFilename = @"secring.gpg";
 
-void dispatch_to_background(void (^block)()) {
-    dispatch_async(getBackgroundQueue(), block);
-}
-
-void dispatch_to_main(void (^block)()) {
-    dispatch_async(dispatch_get_main_queue(), block);
-}
+static NSString *const PGPDefaultUsername = @"default-user";
 
 #pragma mark - PGP extension
 
-@interface PGP ()
+@interface PGP () {
+    NSString *_homedir, *_pubringPath, *_secringPath;
+}
 
-+ (netpgp_t *)initNetPGP;
-+ (void)endNetPGP:(netpgp_t *)netpgp;
+@property (nonatomic, readonly) netpgp_t *netpgp;
 
-+ (NSString *)loadKeyWithType:(PGPKeytype)type forUserId:(NSString *)userId;
+@property (nonatomic, readonly) NSUUID *uuid;
 
-+ (NSString *)homedirPath;
-+ (NSString *)pubringPath;
-+ (NSString *)secringPath;
+@property (nonatomic, readonly) NSString *homedir;
+@property (nonatomic, readonly) NSString *pubringPath;
+@property (nonatomic, readonly) NSString *secringPath;
 
+@property (nonatomic, strong) NSString *userId;
+
++ (instancetype)pgp;
 + (NSError *)errorWithCause:(NSString *)cause;
+
+- (BOOL)initNetPGPForMode:(PGPMode)mode;
+
+- (NSString *)readPubringWithError:(NSError **)error;
+- (NSString *)readSecringWithError:(NSError **)error;
+
+- (void)writeSecringWithArmoredKey:(NSString *)armoredKey error:(NSError **)error;
 
 @end
 
@@ -56,209 +60,308 @@ void dispatch_to_main(void (^block)()) {
 
 @implementation PGP
 
+#pragma mark Constructors
+
++ (instancetype)keyGenerator {
+    PGP *pgp = [self pgp];
+    
+    return [pgp initNetPGPForMode:PGPModeGenerate] ? pgp : nil;
+}
+
++ (instancetype)decryptorWithArmoredPrivateKey:(NSString *)armoredPrivateKey {
+    PGP *pgp = [self pgp];
+    
+    NSError *error;
+    [pgp writeSecringWithArmoredKey:armoredPrivateKey error:&error];
+    
+    if (error) {
+        NSLog(@"Error writing armored key: %@", error);
+        return nil;
+    }
+    
+    return [pgp initNetPGPForMode:PGPModeDecrypt] ? pgp : nil;
+}
+
++ (instancetype)encryptorWithUserId:(NSString *)userId {
+    PGP *pgp = [self pgp];
+    
+    pgp.userId = userId;
+    
+    return [pgp initNetPGPForMode:PGPModeEncrypt] ? pgp : nil;
+}
+
++ (instancetype)signerWithArmoredPrivateKey:(NSString *)armoredPrivateKey
+                                     userId:(NSString *)userId {
+    PGP *pgp = [self pgp];
+    
+    pgp.userId = userId;
+    
+    NSError *error;
+    [pgp writeSecringWithArmoredKey:armoredPrivateKey error:&error];
+    
+    if (error) {
+        NSLog(@"Error writing armored key: %@", error);
+        return nil;
+    }
+    
+    return [pgp initNetPGPForMode:PGPModeSign] ? pgp : nil;
+}
+
++ (instancetype)verifier {
+    PGP *pgp = [self pgp];
+    
+    return [pgp initNetPGPForMode:PGPModeVerify] ? pgp : nil;
+}
+
+#pragma mark Init/dealloc
+
+- (instancetype)init {
+    self = [super init];
+    
+    if (self != nil) {
+        _uuid = [NSUUID UUID];
+    }
+    
+    return self;
+}
+
+- (void)dealloc {
+    if (self.netpgp != NULL) {
+        netpgp_end(self.netpgp);
+        free(self.netpgp);
+        
+        _netpgp = NULL;
+    }
+    
+    if ([[NSFileManager defaultManager] fileExistsAtPath:self.homedir]) {
+        NSError *error;
+        [[NSFileManager defaultManager] removeItemAtPath:self.homedir error:&error];
+        
+        if (error != nil) {
+            NSLog(@"Error removing temporary key directory: %@", error);
+        }
+    }
+}
+
 #pragma mark Methods
 
-/**
- * Generates a new OpenPGP key pair. Currently only supports RSA keys.
- * Primary and subkey will be of same type.
- * @param {module:enums.publicKey} [options.keyType=module:enums.publicKey.rsa_encrypt_sign]    to indicate what type of key to make.
- *                             RSA is 1. See {@link http://tools.ietf.org/html/rfc4880#section-9.1}
- * @param {Integer} options.numBits    number of bits for the key creation. (should be 1024+, generally)
- * @param {String}  options.userId     assumes already in form of "User Name <username@email.com>"
- * @param {Boolean} [options.unlocked=false]    The secret part of the generated key is unlocked
- * @return {Promise<Object>} {key: module:key~Key, privateKeyArmored: String, publicKeyArmored: String}
- * @static
- */
-+ (void)generateKeypairWithOptions:(NSDictionary *)options
-                      onCompletion:(void(^)(NSDictionary *result))onCompletion
-                           onError:(void(^)(NSError *error))onError {
+- (void)generateKeysWithOptions:(NSDictionary *)options
+                completionBlock:(void(^)(NSString *publicKeyArmored, NSString *privateKeyArmored))completionBlock
+                     errorBlock:(void(^)(NSError *error))errorBlock {
     
-    // Execute on background queue:
-    dispatch_to_background(^{
-        // Make sure the key type passed in is RSA:
-        NSNumber *keyType = options[@"keyType"] ?: @0;
-        if (keyType.integerValue != 1) {
-            dispatch_to_main(^{
-                onError([self errorWithCause:[NSString stringWithFormat:@"Key type '%li' passed in, only key type '1' (RSA) supported.", (long) keyType.integerValue]]);
-            });
+    // Get the options out:
+    NSNumber *keyType = options[PGPOptionKeyType] ? options[PGPOptionKeyType] : @(DEFAULT_KEY_TYPE);
+    NSNumber *numBits = options[PGPOptionNumBits] ? options[PGPOptionNumBits] : @(DEFAULT_BIT_COUNT);
+    NSString *userId = options[PGPOptionUserId] ?: PGPDefaultUsername;
+    
+    if (keyType.intValue != 1) {
+        NSString *cause = [NSString stringWithFormat:@"Key type '%li' passed in, only key type '1' (RSA) supported.", (long) keyType.integerValue];
+        
+        errorBlock([PGP errorWithCause:cause]);
+    }
+    
+    if (!netpgp_generate_key(self.netpgp, (char *)userId.UTF8String, numBits.intValue)) {
+        errorBlock([PGP errorWithCause:@"Generate key failed."]);
+    }
+    
+    NSError *error;
+    NSString *publicKeyArmored = [self readPubringWithError:&error];
+    if (error) {
+        errorBlock(error);
+        return;
+    }
+    
+    NSString *privateKeyArmored = [self readSecringWithError:&error];
+    if (error) {
+        errorBlock(error);
+        return;
+    }
+    
+    if (publicKeyArmored && privateKeyArmored) {
+        completionBlock(publicKeyArmored, privateKeyArmored);
+    }
+}
+
+- (void)encryptData:(NSData *)data
+          publicKey:(NSString *)publicKey
+    completionBlock:(void(^)(NSData *result))completionBlock
+         errorBlock:(void(^)(NSError *error))errorBlock {
+    
+    if (![self importPublicKey:publicKey]) {
+        errorBlock([PGP errorWithCause:@"Failed to import"]);
+    }
+    
+    NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
+    
+    void *outbuf = calloc(maxsize, sizeof(Byte));
+    int outsize = netpgp_encrypt_memory(self.netpgp, self.userId.UTF8String, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
+    
+    if (outsize > 0) {
+        completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
+    } else {
+        errorBlock([PGP errorWithCause:@"Failed to encrypt."]);
+    }
+}
+
+- (void)decryptData:(NSData *)data
+    completionBlock:(void (^)(NSData *))completionBlock
+         errorBlock:(void (^)(NSError *))errorBlock {
+    
+    NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
+    
+    void *outbuf = calloc(maxsize, sizeof(Byte));
+    int outsize = netpgp_decrypt_memory(self.netpgp, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
+    
+    if (outsize > 0) {
+        completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
+    } else {
+        errorBlock([PGP errorWithCause:@"Failed to encrypt."]);
+    }
+}
+
+#pragma mark Properties
+
+- (NSString *)homedir {
+    if (_homedir == nil) {
+        NSString *keyDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"keys"];
+        _homedir = [keyDirectory stringByAppendingPathComponent:self.uuid.UUIDString];
+        
+        if (![[NSFileManager defaultManager] fileExistsAtPath:_homedir]) {
+            [[NSFileManager defaultManager] createDirectoryAtPath:_homedir
+                                      withIntermediateDirectories:YES
+                                                       attributes:nil
+                                                            error:nil];
         }
-        
-        netpgp_t *netpgp = [self initNetPGP];
-        
-        if (netpgp) {
-            netpgp_setvar(netpgp, "userid checks", "skip");
-            
-            NSNumber *numBits = options[@"numBits"] ?: @0;
-            NSString *userId = options[@"userId"] ?: @"";
-            
-            char keyName[userId.length + 1]; //+1 for terminating NULL character
-            strcpy(keyName, userId.UTF8String);
-            
-            // Generate the key:
-            if (!netpgp_generate_key(netpgp, keyName, numBits.intValue)) {
-                // Generate failed:
-                dispatch_to_main(^{
-                    onError([self errorWithCause:@"Generate key failed."]);
-                });
-                
-                [self endNetPGP:netpgp];
-                return;
-            }
-            
-            // Get the generated ID from the keys:
-            NSString *generatedId = [NSString stringWithUTF8String:netpgp_getvar(netpgp, "generated userid")];
-            
-            NSError *error;
-            
-            NSString *publicKey = [self loadKeyWithType:PGPKeytypePublic forUserId:generatedId error:&error];
-            if (error) dispatch_to_main(^{onError(error);});
-            
-            NSString *privateKey = [self loadKeyWithType:PGPKeytypePrivate forUserId:generatedId error:&error];
-            if (error) dispatch_to_main(^{onError(error);});
-            
-            dispatch_to_main(^{
-                onCompletion(@{@"privateKeyArmored": privateKey,
-                               @"publicKeyArmored": publicKey});
-            });
-        } else {
-            dispatch_to_main(^{
-                onError([self errorWithCause:@"netpgp failed to init"]);
-            });
+    }
+    
+    return _homedir;
+}
+
+- (NSString *)pubringPath {
+    if (_pubringPath == nil) {
+        _pubringPath = [self.homedir stringByAppendingPathComponent:PGPPubringFilename];
+        if (![[NSFileManager defaultManager] fileExistsAtPath:_pubringPath]) {
+            [[NSFileManager defaultManager] createFileAtPath:_pubringPath
+                                                    contents:nil
+                                                  attributes:@{NSFilePosixPermissions: [NSNumber numberWithShort:0600]}];
         }
-        
-        [self endNetPGP:netpgp];
-    });
-}
-
-+ (NSString *)loadKeyWithType:(PGPKeytype)type forUserId:(NSString *)userId error:(NSError **)error {
-    NSString *keyDirectory = [[self homedirPath] stringByAppendingPathComponent:userId];
-    NSString *keyPath;
-    
-    switch (type) {
-        case PGPKeytypePublic:
-            keyPath = [keyDirectory stringByAppendingPathComponent:PGPPubringFilename];
-            break;
-            
-        case PGPKeytypePrivate:
-            keyPath = [keyDirectory stringByAppendingPathComponent:PGPSecringFilename];
-            break;
     }
     
-    return [NSString stringWithContentsOfFile:keyPath encoding:NSUTF8StringEncoding error:error];
+    return _pubringPath;
 }
 
-+ (void)convertKeyToASCIIArmor:(NSString *)key onCompletion:(void (^)(NSString *))onCompletion {
-    
-}
-
-+ (void)convertASCIIArmorToKey:(NSString *)asciiArmor onCompletion:(void (^)(NSString *))onCompletion {
-    
-}
-
-+ (void)encryptMessageToASCIIArmor:(NSString *)message withPublicKeys:(NSArray *)publicKeys onCompletion:(void (^)(NSString *))onCompletion {
-    
-}
-
-+ (void)decryptASCIIArmorToMessage:(NSString *)asciiArmor onCompletion:(void (^)(NSString *, NSString *))onCompletion {
-    
-}
-
-#pragma mark Private
-
-+ (netpgp_t *)initNetPGP {
-    NSLog(@"Initializing NetPGP");
-    netpgp_t *netpgp = (netpgp_t *) calloc(1, sizeof(netpgp_t));
-    
-    // Set the secret key ring path:
-    netpgp_set_homedir(netpgp, (char *) [self homedirPath].UTF8String, NULL, 0);
-    netpgp_setvar(netpgp, "pubring", (char *) [self pubringPath].UTF8String);
-    netpgp_setvar(netpgp, "secring", (char *) [self secringPath].UTF8String);
-    
-    // User 4MB page for memory file:
-    netpgp_setvar(netpgp, "max mem alloc", "4194304");
-    netpgp_setvar(netpgp, "hash", "sha256");
-    
-    if (!netpgp_init(netpgp)) {
-        NSLog(@"NetPGP failed to initialize.");
-        free(netpgp);
-        
-        return NULL;
+- (NSString *)secringPath {
+    if (_secringPath == nil) {
+        _secringPath = [self.homedir stringByAppendingPathComponent:PGPSecringFilename];
+        if (![[NSFileManager defaultManager] fileExistsAtPath:_secringPath]) {
+            [[NSFileManager defaultManager] createFileAtPath:_secringPath
+                                                    contents:nil
+                                                  attributes:@{NSFilePosixPermissions: [NSNumber numberWithShort:0600]}];
+        }
     }
     
-    return netpgp;
+    return _secringPath;
 }
 
-+ (void)endNetPGP:(netpgp_t *)netpgp {
-    NSLog(@"Ending NetPGP");
-    
-    if (netpgp != NULL) {
-        netpgp_end(netpgp);
-        free(netpgp);
-    }
-}
+#pragma mark Class private
 
-+ (NSString *)pathForKeyId:(NSString *)keyId {
-    return [[self homedirPath] stringByAppendingPathComponent:keyId];
++ (instancetype)pgp {
+    return [[self alloc] init];
 }
 
 + (NSError *)errorWithCause:(NSString *)cause {
     return [NSError errorWithDomain:@"PGP"
                                code:-1
-                           userInfo:@{@"reason": cause}];
+                           userInfo:@{@"cause": cause}];
 }
 
-+ (NSString *)homedirPath {
-    static dispatch_once_t once_token;
-    
-    dispatch_once(&once_token, ^{
-        // Don't save keys, make sure we remove the last '/':
-        NSURL *temporaryUrl = [NSURL fileURLWithPath:NSTemporaryDirectory()];
-        NSString *homedir = [temporaryUrl.path stringByAppendingPathComponent:@"keys"];
-        
-        if (![[NSFileManager defaultManager] fileExistsAtPath:homedir]) {
-            [[NSFileManager defaultManager] createDirectoryAtPath:homedir withIntermediateDirectories:YES attributes:nil error:nil];
-        }
-        
-        _homedir = homedir;
-    });
-    
-    return _homedir;
++ (NSString *)generateTemporaryPath {
+    return [NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString];
 }
 
-+ (NSString *)secringPath {
-    static dispatch_once_t once_token;
+#pragma mark Private methods
+
+- (BOOL)initNetPGPForMode:(PGPMode)mode {
+    _netpgp = calloc(0x1, sizeof(netpgp_t));
     
-    dispatch_once(&once_token, ^{
-        NSString *secring = [[self homedirPath] stringByAppendingPathComponent:PGPSecringFilename];
-        
-        if (![[NSFileManager defaultManager] fileExistsAtPath:secring]) {
-            [[NSFileManager defaultManager] createFileAtPath:secring
-                                                    contents:nil
-                                                  attributes:@{NSFilePosixPermissions: [NSNumber numberWithShort:0600]}];
-        }
-        
-        _secring = secring;
-    });
+    netpgp_setvar(_netpgp, "hash", DEFAULT_HASH_ALG);
+    netpgp_setvar(_netpgp, "max mem alloc", "4194304");
     
-    return _secring;
+    switch (mode) {
+        case PGPModeGenerate:
+            // Generate skips userid checking:
+            netpgp_setvar(_netpgp, "userid checks", "skip");
+            break;
+            
+        case PGPModeDecrypt:
+            // Decrypt requires seckey:
+            netpgp_setvar(_netpgp, "need seckey", "1");
+            break;
+            
+        case PGPModeEncrypt:
+            // Encrypt requires userid:
+            netpgp_setvar(_netpgp, "need userid", "1");
+            netpgp_setvar(_netpgp, "userid", self.userId.UTF8String);
+            break;
+            
+        case PGPModeSign:
+            // Sign requires userid and seckey:
+            netpgp_setvar(_netpgp, "need seckey", "1");
+            netpgp_setvar(_netpgp, "need userid", "1");
+            
+            netpgp_setvar(_netpgp, "userid", self.userId.UTF8String);
+            break;
+            
+        case PGPModeVerify:
+            // Nothing special for verify.
+            break;
+    }
+    
+    netpgp_set_homedir(_netpgp, (char *) self.homedir.UTF8String, NULL, 0);
+    netpgp_setvar(_netpgp, "pubring", (char *) self.pubringPath.UTF8String);
+    netpgp_setvar(_netpgp, "secring", (char *) self.secringPath.UTF8String);
+    
+    return netpgp_init(_netpgp);
 }
 
-+ (NSString *)pubringPath {
-    static dispatch_once_t once_token;
+- (NSString *)readPubringWithError:(NSError **)error {
+    return [NSString stringWithContentsOfFile:self.pubringPath
+                                     encoding:NSUTF8StringEncoding
+                                        error:error];
+}
+
+- (NSString *)readSecringWithError:(NSError **)error {
+    return [NSString stringWithContentsOfFile:self.secringPath
+                                     encoding:NSUTF8StringEncoding
+                                        error:error];
+}
+
+- (void)writeSecringWithArmoredKey:(NSString *)armoredKey error:(NSError **)error {
+    [armoredKey writeToFile:self.secringPath atomically:YES encoding:NSUTF8StringEncoding error:error];
+}
+
+- (BOOL)importPublicKey:(NSString *)publicKey {
+    NSString *temporaryDirectory = [PGP generateTemporaryPath];
     
-    dispatch_once(&once_token, ^{
-        NSString *pubring = [[self homedirPath] stringByAppendingPathComponent:PGPPubringFilename];
-        
-        if (![[NSFileManager defaultManager] fileExistsAtPath:pubring]) {
-            [[NSFileManager defaultManager] createFileAtPath:pubring
-                                                    contents:nil
-                                                  attributes:@{NSFilePosixPermissions: [NSNumber numberWithShort:0600]}];
-        }
-        
-        _pubring = pubring;
-    });
+    if ([[NSFileManager defaultManager] fileExistsAtPath:temporaryDirectory]) {
+        @throw [NSException exceptionWithName:@"PGPException"
+                                       reason:@"File already exists at temporary path!"
+                                     userInfo:@{@"path": temporaryDirectory}];
+    }
     
-    return _pubring;
+    [[NSFileManager defaultManager] createDirectoryAtPath:temporaryDirectory withIntermediateDirectories:YES attributes:nil error:nil];
+    
+    NSString *temporaryPath = [temporaryDirectory stringByAppendingPathComponent:@"tempring.gpg"];
+    
+    [[NSFileManager defaultManager] createFileAtPath:temporaryPath
+                                            contents:[publicKey dataUsingEncoding:NSUTF8StringEncoding]
+                                          attributes:@{NSFilePosixPermissions: [NSNumber numberWithShort:0600]}];
+    
+    BOOL success = netpgp_import_key(self.netpgp, (char *) temporaryPath.UTF8String);
+    
+    [[NSFileManager defaultManager] removeItemAtPath:temporaryPath error:nil];
+    
+    return success;
 }
 
 @end

@@ -251,6 +251,33 @@ readkeyring(netpgp_t *netpgp, const char *name)
 	return keyring;
 }
 
+static void *
+readsecring(netpgp_t *netpgp, const char *name)
+{
+    pgp_keyring_t	*keyring;
+    const unsigned	 armor = 1;
+    char		 f[MAXPATHLEN];
+    char		*filename;
+    char		*homedir;
+    
+    homedir = netpgp_getvar(netpgp, "homedir");
+    if ((filename = netpgp_getvar(netpgp, name)) == NULL) {
+        (void) snprintf(f, sizeof(f), "%s/%s.gpg", homedir, name);
+        filename = f;
+    }
+    if ((keyring = calloc(1, sizeof(*keyring))) == NULL) {
+        (void) fprintf(stderr, "readkeyring: bad alloc\n");
+        return NULL;
+    }
+    if (!pgp_keyring_fileread(keyring, armor, filename)) {
+        free(keyring);
+        (void) fprintf(stderr, "Can't read %s %s\n", name, filename);
+        return NULL;
+    }
+    netpgp_setvar(netpgp, name, filename);
+    return keyring;
+}
+
 /* read keys from ssh key files */
 static int
 readsshkeys(netpgp_t *netpgp, char *homedir, const char *needseckey)
@@ -448,7 +475,7 @@ static int
 appendkey(pgp_io_t *io, pgp_key_t *key, char *ringfile)
 {
 	pgp_output_t	*create;
-	const unsigned	 armor = 1;
+	const unsigned	 noarmor = 0;
 	int		 fd;
 
 	if ((fd = pgp_setup_file_append(&create, ringfile)) < 0) {
@@ -458,7 +485,7 @@ appendkey(pgp_io_t *io, pgp_key_t *key, char *ringfile)
 		(void) fprintf(io->errs, "can't open pubring '%s'\n", ringfile);
 		return 0;
 	}
-	if (!pgp_write_xfer_pubkey(create, key, armor)) {
+	if (!pgp_write_xfer_pubkey(create, key, noarmor)) {
 		(void) fprintf(io->errs, "Cannot write pubkey\n");
 		return 0;
 	}
@@ -859,7 +886,7 @@ netpgp_init(netpgp_t *netpgp)
 		/* only read secret keys if we need to */
 		if (netpgp_getvar(netpgp, "need seckey")) {
 			/* read the secret ring */
-			netpgp->secring = readkeyring(netpgp, "secring");
+			netpgp->secring = readsecring(netpgp, "secring");
 			if (netpgp->secring == NULL) {
 				(void) fprintf(io->errs, "Can't read sec keyring\n");
 				return 0;
@@ -1176,20 +1203,13 @@ netpgp_generate_key(netpgp_t *netpgp, char *id, int numbits)
 	pgp_key_t		*key;
 	pgp_io_t		*io;
 	uint8_t			*uid;
-	char			 passphrase[128];
 	char			 newid[1024];
-	char			 filename[MAXPATHLEN];
-	char			 dir[MAXPATHLEN];
-	char			*cp;
 	char			*ringfile;
-	char			*numtries;
-	int             	 attempts;
-	int             	 passc;
 	int             	 fd;
-	int             	 cc;
 
 	uid = NULL;
 	io = netpgp->io;
+    
 	/* generate a new key */
 	if (id) {
 		(void) snprintf(newid, sizeof(newid), "%s", id);
@@ -1197,60 +1217,54 @@ netpgp_generate_key(netpgp_t *netpgp, char *id, int numbits)
 		(void) snprintf(newid, sizeof(newid),
 			"RSA %d-bit key <%s@localhost>", numbits, getenv("LOGNAME"));
 	}
+    
 	uid = (uint8_t *)newid;
 	key = pgp_rsa_new_selfsign_key(numbits, 65537UL, uid,
 			netpgp_getvar(netpgp, "hash"),
 			netpgp_getvar(netpgp, "cipher"));
+    
 	if (key == NULL) {
 		(void) fprintf(io->errs, "Cannot generate key\n");
 		return 0;
 	}
-	cp = NULL;
-	pgp_sprint_keydata(netpgp->io, NULL, key, &cp, "signature ", &key->key.seckey.pubkey, 0);
-	(void) fprintf(stdout, "%s", cp);
+    
 	/* write public key */
-	cc = snprintf(dir, sizeof(dir), "%s/%.16s", netpgp_getvar(netpgp, "homedir"), &cp[ID_OFFSET]);
-	netpgp_setvar(netpgp, "generated userid", &dir[cc - 16]);
-	if (mkdir(dir, 0700) < 0) {
-		(void) fprintf(io->errs, "can't mkdir '%s'\n", dir);
-		return 0;
-	}
-	(void) fprintf(io->errs, "netpgp: generated keys in directory %s\n", dir);
-	(void) snprintf(ringfile = filename, sizeof(filename), "%s/pubring.gpg", dir);
-	if (!appendkey(io, key, ringfile)) {
-		(void) fprintf(io->errs, "Cannot write pubkey to '%s'\n", ringfile);
-		return 0;
-	}
-	if (netpgp->pubring != NULL) {
-		pgp_keyring_free(netpgp->pubring);
-	}
-	/* write secret key */
-	(void) snprintf(ringfile = filename, sizeof(filename), "%s/secring.gpg", dir);
-	if ((fd = pgp_setup_file_append(&create, ringfile)) < 0) {
-		fd = pgp_setup_file_write(&create, ringfile, 0);
-	}
-	if (fd < 0) {
-		(void) fprintf(io->errs, "can't append secring '%s'\n", ringfile);
-		return 0;
-	}
-	/* get the passphrase */
-	if ((numtries = netpgp_getvar(netpgp, "numtries")) == NULL ||
-	    (attempts = atoi(numtries)) <= 0) {
-		attempts = MAX_PASSPHRASE_ATTEMPTS;
-	} else if (strcmp(numtries, "unlimited") == 0) {
-		attempts = INFINITE_ATTEMPTS;
-	}
-	passc = find_passphrase(netpgp->passfp, &cp[ID_OFFSET], passphrase, sizeof(passphrase), attempts);
-	if (!pgp_write_xfer_seckey(create, key, (uint8_t *)passphrase, (const unsigned)passc, armor)) {
-		(void) fprintf(io->errs, "Cannot write seckey\n");
-		return 0;
-	}
-	pgp_teardown_file_write(create, fd);
+    
+    ringfile = netpgp_getvar(netpgp, "pubring");
+    fd = pgp_setup_file_write(&create, ringfile, 1);
+    
+    if (fd < 0) {
+        (void) fprintf(io->errs, "can't open pubring '%s'\n", ringfile);
+        return 0;
+    }
+    
+    if (!pgp_write_xfer_pubkey(create, key, armor)) {
+        (void) fprintf(io->errs, "Cannot write seckey\n");
+        return 0;
+    }
+    pgp_teardown_file_write(create, fd);
+    
+    /* write secret key */
+    
+    ringfile = netpgp_getvar(netpgp, "secring");
+    fd = pgp_setup_file_write(&create, ringfile, 1);
+    
+    if (fd < 0) {
+        (void) fprintf(io->errs, "can't open secring '%s'\n", ringfile);
+        return 0;
+    }
+    
+    if (!pgp_write_xfer_seckey(create, key, NULL, 0, armor)) {
+        (void) fprintf(io->errs, "Cannot write seckey\n");
+        return 0;
+    }
+    pgp_teardown_file_write(create, fd);
+    
 	if (netpgp->secring != NULL) {
 		pgp_keyring_free(netpgp->secring);
 	}
+    
 	pgp_keydata_free(key);
-	free(cp);
 	return 1;
 }
 

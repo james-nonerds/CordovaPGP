@@ -1,42 +1,54 @@
 //
-//  PGP.h
-//  iOS PGP
+//  NetPGP.h
+//  PGP Demo
 //
-//  Created by James Knight on 6/3/15.
+//  Created by James Knight on 6/9/15.
 //  Copyright (c) 2015 Gradient. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
 
+FOUNDATION_EXPORT NSString *const PGPOptionKeyType;
+FOUNDATION_EXPORT NSString *const PGPOptionNumBits;
+FOUNDATION_EXPORT NSString *const PGPOptionUserId;
+FOUNDATION_EXPORT NSString *const PGPOptionUnlocked;
+
+FOUNDATION_EXPORT NSString *const PGPPubringFilename;
+FOUNDATION_EXPORT NSString *const PGPSecringFilename;
+
+typedef NS_ENUM(NSUInteger, PGPMode) {
+    PGPModeGenerate,
+    PGPModeEncrypt,
+    PGPModeDecrypt,
+    PGPModeSign,
+    PGPModeVerify
+};
+
+#pragma mark - PGP interface
+
 @interface PGP : NSObject
 
-/**
- * Generate a PGP keypair using RSA (key type 1), accepting only 256-bit AES for symmetric operations (key type 9), and accepting a userId and bit size as options.
- */
-+ (void)generateKeypairWithOptions:(NSDictionary *)options
-                      onCompletion:(void(^)(NSDictionary *result))onCompletion
-                           onError:(void(^)(NSError *error))onError;
+#pragma mark Constructors
 
-/**
- * Write public and private keys to ASCII Armor format (per RFC 4880).
- */
-+ (void)convertKeyToASCIIArmor:(NSString *)key onCompletion:(void(^)(NSString *asciiArmor))onCompletion;
++ (instancetype)keyGenerator;
++ (instancetype)decryptorWithArmoredPrivateKey:(NSString *)armoredPrivateKey;
++ (instancetype)encryptorWithUserId:(NSString *)userId;
++ (instancetype)signerWithArmoredPrivateKey:(NSString *)armoredPrivateKey userId:(NSString *)userId;
++ (instancetype)verifier;
 
-/**
- * Read public and private keys from ASCII Armor format (per RFC 4880).
- */
-+ (void)convertASCIIArmorToKey:(NSString *)asciiArmor onCompletion:(void(^)(NSString *key))onCompletion;
+#pragma mark - Methods
 
-/**
- * Given a list of public PGP keys and a plaintext message, sign & encrypt the message so that it can be decrypted by any of the keys. 
- * Return the message in ASCII Armor format.
- */
-+ (void)encryptMessageToASCIIArmor:(NSString *)message withPublicKeys:(NSArray *)publicKeys onCompletion:(void(^)(NSString *asciiArmor))onCompletion;
+- (void)generateKeysWithOptions:(NSDictionary *)options
+                completionBlock:(void(^)(NSString *publicKeyArmored, NSString *privateKeyArmored))completionBlock
+                     errorBlock:(void(^)(NSError *error))errorBlock;
 
-/**
- * Given a list of public PGP keys and an encrypted message in ASCII Armor format, decrypt and verify the message. 
- * In addition to the plaintext of the message, provide a way to determine which of the keys was used to verify the signature.
- */
-+ (void)decryptASCIIArmorToMessage:(NSString *)asciiArmor onCompletion:(void(^)(NSString *message, NSString *publicKeyUsed))onCompletion;
+- (void)decryptData:(NSData *)data
+    completionBlock:(void(^)(NSData *result))completionBlock
+         errorBlock:(void(^)(NSError *error))errorBlock;
+
+- (void)encryptData:(NSData *)data
+          publicKey:(NSString *)publicKey
+    completionBlock:(void(^)(NSData *result))completionBlock
+         errorBlock:(void(^)(NSError *error))errorBlock;
 
 @end

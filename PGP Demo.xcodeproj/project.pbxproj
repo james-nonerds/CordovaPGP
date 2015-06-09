@@ -33,9 +33,10 @@
 		A70E131C1B20FE880061D5D8 /* symmetric.c in Sources */ = {isa = PBXBuildFile; fileRef = A70E13041B20FE880061D5D8 /* symmetric.c */; };
 		A70E131D1B20FE880061D5D8 /* validate.c in Sources */ = {isa = PBXBuildFile; fileRef = A70E13061B20FE880061D5D8 /* validate.c */; };
 		A70E131E1B20FE880061D5D8 /* writer.c in Sources */ = {isa = PBXBuildFile; fileRef = A70E13091B20FE880061D5D8 /* writer.c */; };
-		A70E131F1B20FE880061D5D8 /* PGP.m in Sources */ = {isa = PBXBuildFile; fileRef = A70E130C1B20FE880061D5D8 /* PGP.m */; };
+		A70E131F1B20FE880061D5D8 /* PGPLib.m in Sources */ = {isa = PBXBuildFile; fileRef = A70E130C1B20FE880061D5D8 /* PGPLib.m */; };
 		A74D005C1B2101E2005BA9D8 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A74D005B1B2101E2005BA9D8 /* libz.dylib */; };
 		A74D005E1B210297005BA9D8 /* libbz2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A74D005D1B210297005BA9D8 /* libbz2.dylib */; };
+		A75DF0601B2733FB003DD526 /* PGP.m in Sources */ = {isa = PBXBuildFile; fileRef = A75DF05F1B2733FB003DD526 /* PGP.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,10 +104,12 @@
 		A70E13081B20FE880061D5D8 /* version.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = version.h; sourceTree = "<group>"; };
 		A70E13091B20FE880061D5D8 /* writer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = writer.c; sourceTree = "<group>"; };
 		A70E130A1B20FE880061D5D8 /* writer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = writer.h; sourceTree = "<group>"; };
-		A70E130B1B20FE880061D5D8 /* PGP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGP.h; sourceTree = "<group>"; };
-		A70E130C1B20FE880061D5D8 /* PGP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGP.m; sourceTree = "<group>"; };
+		A70E130B1B20FE880061D5D8 /* PGPLib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGPLib.h; sourceTree = "<group>"; };
+		A70E130C1B20FE880061D5D8 /* PGPLib.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGPLib.m; sourceTree = "<group>"; };
 		A74D005B1B2101E2005BA9D8 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		A74D005D1B210297005BA9D8 /* libbz2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbz2.dylib; path = usr/lib/libbz2.dylib; sourceTree = SDKROOT; };
+		A75DF05E1B2733FB003DD526 /* PGP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGP.h; sourceTree = "<group>"; };
+		A75DF05F1B2733FB003DD526 /* PGP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGP.m; sourceTree = "<group>"; };
 		BB9663F12A401D718D86715E /* Pods-PGP Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PGP Demo.release.xcconfig"; path = "Pods/Target Support Files/Pods-PGP Demo/Pods-PGP Demo.release.xcconfig"; sourceTree = "<group>"; };
 		C169ABB41FA1EEABD311BDDB /* libPods-PGP Demo.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PGP Demo.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DDEDEB90D480298EE72F0F35 /* Pods-PGP Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PGP Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PGP Demo/Pods-PGP Demo.debug.xcconfig"; sourceTree = "<group>"; };
@@ -218,8 +221,10 @@
 			isa = PBXGroup;
 			children = (
 				A70E12E01B20FE880061D5D8 /* netpgp */,
-				A70E130B1B20FE880061D5D8 /* PGP.h */,
-				A70E130C1B20FE880061D5D8 /* PGP.m */,
+				A70E130B1B20FE880061D5D8 /* PGPLib.h */,
+				A70E130C1B20FE880061D5D8 /* PGPLib.m */,
+				A75DF05E1B2733FB003DD526 /* PGP.h */,
+				A75DF05F1B2733FB003DD526 /* PGP.m */,
 			);
 			name = "PGP Library";
 			sourceTree = "<group>";
@@ -408,7 +413,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A70E12C21B20FE5D0061D5D8 /* ViewController.m in Sources */,
-				A70E131F1B20FE880061D5D8 /* PGP.m in Sources */,
+				A70E131F1B20FE880061D5D8 /* PGPLib.m in Sources */,
 				A70E131B1B20FE880061D5D8 /* ssh2pgp.c in Sources */,
 				A70E13171B20FE880061D5D8 /* packet-print.c in Sources */,
 				A70E131C1B20FE880061D5D8 /* symmetric.c in Sources */,
@@ -426,6 +431,7 @@
 				A70E130D1B20FE880061D5D8 /* bufgap.c in Sources */,
 				A70E13191B20FE880061D5D8 /* reader.c in Sources */,
 				A70E12BC1B20FE5D0061D5D8 /* main.m in Sources */,
+				A75DF0601B2733FB003DD526 /* PGP.m in Sources */,
 				A70E130E1B20FE880061D5D8 /* compress.c in Sources */,
 				A70E131E1B20FE880061D5D8 /* writer.c in Sources */,
 				A70E130F1B20FE880061D5D8 /* create.c in Sources */,
