@@ -7,7 +7,6 @@
 //
 
 #import <XCTest/XCTest.h>
-#import "PGPLib.h"
 
 @interface PGP_DemoTests : XCTestCase
 

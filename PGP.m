@@ -17,6 +17,7 @@
 #define DEFAULT_KEY_TYPE 1
 
 #define SHOULD_ARMOR 1
+#define CLEARTEXT 0
 
 NSString *const PGPOptionKeyType = @"keyType";
 NSString *const PGPOptionNumBits = @"numBits";
@@ -31,12 +32,13 @@ static NSString *const PGPDefaultUsername = @"default-user";
 #pragma mark - PGP extension
 
 @interface PGP () {
-    NSString *_homedir, *_pubringPath, *_secringPath;
+    NSString *_homedir, *_pubringPath, *_secringPath, *_outPath;
 }
 
 @property (nonatomic, readonly) netpgp_t *netpgp;
 
 @property (nonatomic, readonly) NSUUID *uuid;
+@property (nonatomic, readonly) NSString *outPath;
 
 @property (nonatomic, readonly) NSString *homedir;
 @property (nonatomic, readonly) NSString *pubringPath;
@@ -68,7 +70,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
     return [pgp initNetPGPForMode:PGPModeGenerate] ? pgp : nil;
 }
 
-+ (instancetype)decryptorWithArmoredPrivateKey:(NSString *)armoredPrivateKey {
++ (instancetype)decryptorWithPrivateKey:(NSString *)armoredPrivateKey {
     PGP *pgp = [self pgp];
     
     NSError *error;
@@ -90,8 +92,8 @@ static NSString *const PGPDefaultUsername = @"default-user";
     return [pgp initNetPGPForMode:PGPModeEncrypt] ? pgp : nil;
 }
 
-+ (instancetype)signerWithArmoredPrivateKey:(NSString *)armoredPrivateKey
-                                     userId:(NSString *)userId {
++ (instancetype)signerWithPrivateKey:(NSString *)armoredPrivateKey
+                              userId:(NSString *)userId {
     PGP *pgp = [self pgp];
     
     pgp.userId = userId;
@@ -134,12 +136,11 @@ static NSString *const PGPDefaultUsername = @"default-user";
     }
     
     if ([[NSFileManager defaultManager] fileExistsAtPath:self.homedir]) {
-        NSError *error;
-        [[NSFileManager defaultManager] removeItemAtPath:self.homedir error:&error];
-        
-        if (error != nil) {
-            NSLog(@"Error removing temporary key directory: %@", error);
-        }
+        [[NSFileManager defaultManager] removeItemAtPath:self.homedir error:nil];
+    }
+    
+    if ([[NSFileManager defaultManager] fileExistsAtPath:self.outPath]) {
+        [[NSFileManager defaultManager] removeItemAtPath:self.outPath error:nil];
     }
 }
 
@@ -176,6 +177,8 @@ static NSString *const PGPDefaultUsername = @"default-user";
         errorBlock(error);
         return;
     }
+    
+    NSLog(@"generated id: %s", netpgp_getvar(self.netpgp, "generated userid"));
     
     if (publicKeyArmored && privateKeyArmored) {
         completionBlock(publicKeyArmored, privateKeyArmored);
@@ -217,6 +220,40 @@ static NSString *const PGPDefaultUsername = @"default-user";
     } else {
         errorBlock([PGP errorWithCause:@"Failed to encrypt."]);
     }
+}
+
+- (void)signData:(NSData *)data
+       publicKey:(NSString *)publicKey
+ completionBlock:(void (^)(NSData *))completionBlock
+      errorBlock:(void (^)(NSError *))errorBlock {
+    
+    if (![self importPublicKey:publicKey]) {
+        errorBlock([PGP errorWithCause:@"Failed to import"]);
+    }
+    
+    NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
+    
+    void *outbuf = calloc(maxsize, sizeof(Byte));
+    int outsize = netpgp_sign_memory(self.netpgp, self.userId.UTF8String, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR, CLEARTEXT);
+    
+    if (outsize > 0) {
+        completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
+    } else {
+        errorBlock([PGP errorWithCause:@"Failed to encrypt."]);
+    }
+}
+
+- (void)verifyData:(NSData *)data
+         publicKey:(NSString *)publicKey
+   completionBlock:(void (^)(BOOL))completionBlock
+        errorBlock:(void (^)(NSError *))errorBlock {
+    
+    if (![self importPublicKey:publicKey]) {
+        errorBlock([PGP errorWithCause:@"Failed to import"]);
+    }
+    
+    BOOL result = netpgp_verify_memory(self.netpgp, data.bytes, data.length, NULL, 0, 0);
+    completionBlock(result);
 }
 
 #pragma mark Properties
@@ -263,6 +300,28 @@ static NSString *const PGPDefaultUsername = @"default-user";
     return _secringPath;
 }
 
+- (NSString *)outPath {
+    if (_outPath == nil) {
+        
+        NSString *logDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"logs"];
+        
+        if (![[NSFileManager defaultManager] fileExistsAtPath:logDirectory]) {
+            [[NSFileManager defaultManager] createDirectoryAtPath:logDirectory
+                                      withIntermediateDirectories:YES
+                                                       attributes:nil
+                                                            error:nil];
+        }
+                                  
+        _outPath = [[logDirectory stringByAppendingPathComponent:_uuid.UUIDString] stringByAppendingPathExtension:@"log"];
+        
+        [[NSFileManager defaultManager] createFileAtPath:_outPath
+                                                contents:nil
+                                              attributes:@{NSFilePosixPermissions: [NSNumber numberWithShort:0600]}];
+    }
+    
+    return _outPath;
+}
+
 #pragma mark Class private
 
 + (instancetype)pgp {
@@ -286,6 +345,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
     
     netpgp_setvar(_netpgp, "hash", DEFAULT_HASH_ALG);
     netpgp_setvar(_netpgp, "max mem alloc", "4194304");
+//    netpgp_setvar(_netpgp, "res", self.outPath.UTF8String);
     
     switch (mode) {
         case PGPModeGenerate:
@@ -320,6 +380,9 @@ static NSString *const PGPDefaultUsername = @"default-user";
     netpgp_set_homedir(_netpgp, (char *) self.homedir.UTF8String, NULL, 0);
     netpgp_setvar(_netpgp, "pubring", (char *) self.pubringPath.UTF8String);
     netpgp_setvar(_netpgp, "secring", (char *) self.secringPath.UTF8String);
+    
+//    netpgp_incvar(_netpgp, "verbose", 1);
+//    netpgp_set_debug(NULL);
     
     return netpgp_init(_netpgp);
 }
@@ -359,7 +422,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
     
     BOOL success = netpgp_import_key(self.netpgp, (char *) temporaryPath.UTF8String);
     
-    [[NSFileManager defaultManager] removeItemAtPath:temporaryPath error:nil];
+    [[NSFileManager defaultManager] removeItemAtPath:temporaryDirectory error:nil];
     
     return success;
 }

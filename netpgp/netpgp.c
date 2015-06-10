@@ -1202,7 +1202,10 @@ netpgp_generate_key(netpgp_t *netpgp, char *id, int numbits)
 	const unsigned		 armor = 1;
 	pgp_key_t		*key;
 	pgp_io_t		*io;
-	uint8_t			*uid;
+    uint8_t			*uid;
+    char			 dir[MAXPATHLEN];
+    char			*cp;
+    int             	 cc;
 	char			 newid[1024];
 	char			*ringfile;
 	int             	 fd;
@@ -1227,6 +1230,12 @@ netpgp_generate_key(netpgp_t *netpgp, char *id, int numbits)
 		(void) fprintf(io->errs, "Cannot generate key\n");
 		return 0;
 	}
+    
+    cp = NULL;
+    pgp_sprint_keydata(netpgp->io, NULL, key, &cp, "signature ", &key->key.seckey.pubkey, 0);
+    (void) fprintf(stdout, "%s", cp);
+    cc = snprintf(dir, sizeof(dir), "%s/%.16s", netpgp_getvar(netpgp, "homedir"), &cp[ID_OFFSET]);
+    netpgp_setvar(netpgp, "generated userid", &dir[cc - 16]);
     
 	/* write public key */
     

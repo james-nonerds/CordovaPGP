@@ -33,10 +33,13 @@
 		A70E131C1B20FE880061D5D8 /* symmetric.c in Sources */ = {isa = PBXBuildFile; fileRef = A70E13041B20FE880061D5D8 /* symmetric.c */; };
 		A70E131D1B20FE880061D5D8 /* validate.c in Sources */ = {isa = PBXBuildFile; fileRef = A70E13061B20FE880061D5D8 /* validate.c */; };
 		A70E131E1B20FE880061D5D8 /* writer.c in Sources */ = {isa = PBXBuildFile; fileRef = A70E13091B20FE880061D5D8 /* writer.c */; };
-		A70E131F1B20FE880061D5D8 /* PGPLib.m in Sources */ = {isa = PBXBuildFile; fileRef = A70E130C1B20FE880061D5D8 /* PGPLib.m */; };
 		A74D005C1B2101E2005BA9D8 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A74D005B1B2101E2005BA9D8 /* libz.dylib */; };
 		A74D005E1B210297005BA9D8 /* libbz2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A74D005D1B210297005BA9D8 /* libbz2.dylib */; };
 		A75DF0601B2733FB003DD526 /* PGP.m in Sources */ = {isa = PBXBuildFile; fileRef = A75DF05F1B2733FB003DD526 /* PGP.m */; };
+		A7E8C1EA1B278B1300EBAB49 /* fmemopen.c in Sources */ = {isa = PBXBuildFile; fileRef = A7E8C1E81B278B1300EBAB49 /* fmemopen.c */; };
+		A7E8C1ED1B27D9F000EBAB49 /* doc in Resources */ = {isa = PBXBuildFile; fileRef = A7E8C1EC1B27D9F000EBAB49 /* doc */; };
+		A7E8C1EF1B27DA0B00EBAB49 /* seckey.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7E8C1EE1B27DA0B00EBAB49 /* seckey.gpg */; };
+		A7E8C1F21B27DA5D00EBAB49 /* pubkey.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7E8C1F11B27DA5D00EBAB49 /* pubkey.gpg */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -104,12 +107,15 @@
 		A70E13081B20FE880061D5D8 /* version.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = version.h; sourceTree = "<group>"; };
 		A70E13091B20FE880061D5D8 /* writer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = writer.c; sourceTree = "<group>"; };
 		A70E130A1B20FE880061D5D8 /* writer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = writer.h; sourceTree = "<group>"; };
-		A70E130B1B20FE880061D5D8 /* PGPLib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGPLib.h; sourceTree = "<group>"; };
-		A70E130C1B20FE880061D5D8 /* PGPLib.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGPLib.m; sourceTree = "<group>"; };
 		A74D005B1B2101E2005BA9D8 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		A74D005D1B210297005BA9D8 /* libbz2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbz2.dylib; path = usr/lib/libbz2.dylib; sourceTree = SDKROOT; };
 		A75DF05E1B2733FB003DD526 /* PGP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGP.h; sourceTree = "<group>"; };
 		A75DF05F1B2733FB003DD526 /* PGP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGP.m; sourceTree = "<group>"; };
+		A7E8C1E81B278B1300EBAB49 /* fmemopen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = fmemopen.c; sourceTree = "<group>"; };
+		A7E8C1E91B278B1300EBAB49 /* fmemopen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fmemopen.h; sourceTree = "<group>"; };
+		A7E8C1EC1B27D9F000EBAB49 /* doc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = doc; sourceTree = "<group>"; };
+		A7E8C1EE1B27DA0B00EBAB49 /* seckey.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = seckey.gpg; sourceTree = "<group>"; };
+		A7E8C1F11B27DA5D00EBAB49 /* pubkey.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = pubkey.gpg; sourceTree = "<group>"; };
 		BB9663F12A401D718D86715E /* Pods-PGP Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PGP Demo.release.xcconfig"; path = "Pods/Target Support Files/Pods-PGP Demo/Pods-PGP Demo.release.xcconfig"; sourceTree = "<group>"; };
 		C169ABB41FA1EEABD311BDDB /* libPods-PGP Demo.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PGP Demo.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DDEDEB90D480298EE72F0F35 /* Pods-PGP Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PGP Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PGP Demo/Pods-PGP Demo.debug.xcconfig"; sourceTree = "<group>"; };
@@ -187,6 +193,7 @@
 				A70E12C61B20FE5D0061D5D8 /* Images.xcassets */,
 				A70E12C81B20FE5D0061D5D8 /* LaunchScreen.xib */,
 				A70E12B91B20FE5D0061D5D8 /* Supporting Files */,
+				A7E8C1F01B27DA2400EBAB49 /* Demo resources */,
 			);
 			path = "PGP Demo";
 			sourceTree = "<group>";
@@ -220,9 +227,8 @@
 		A70E12DF1B20FE6E0061D5D8 /* PGP Library */ = {
 			isa = PBXGroup;
 			children = (
+				A7E8C1EB1B278B1700EBAB49 /* fmemopen */,
 				A70E12E01B20FE880061D5D8 /* netpgp */,
-				A70E130B1B20FE880061D5D8 /* PGPLib.h */,
-				A70E130C1B20FE880061D5D8 /* PGPLib.m */,
 				A75DF05E1B2733FB003DD526 /* PGP.h */,
 				A75DF05F1B2733FB003DD526 /* PGP.m */,
 			);
@@ -275,6 +281,25 @@
 				A70E130A1B20FE880061D5D8 /* writer.h */,
 			);
 			path = netpgp;
+			sourceTree = "<group>";
+		};
+		A7E8C1EB1B278B1700EBAB49 /* fmemopen */ = {
+			isa = PBXGroup;
+			children = (
+				A7E8C1E81B278B1300EBAB49 /* fmemopen.c */,
+				A7E8C1E91B278B1300EBAB49 /* fmemopen.h */,
+			);
+			name = fmemopen;
+			sourceTree = "<group>";
+		};
+		A7E8C1F01B27DA2400EBAB49 /* Demo resources */ = {
+			isa = PBXGroup;
+			children = (
+				A7E8C1EC1B27D9F000EBAB49 /* doc */,
+				A7E8C1EE1B27DA0B00EBAB49 /* seckey.gpg */,
+				A7E8C1F11B27DA5D00EBAB49 /* pubkey.gpg */,
+			);
+			name = "Demo resources";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -359,9 +384,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7E8C1F21B27DA5D00EBAB49 /* pubkey.gpg in Resources */,
 				A70E12C51B20FE5D0061D5D8 /* Main.storyboard in Resources */,
+				A7E8C1ED1B27D9F000EBAB49 /* doc in Resources */,
 				A70E12CA1B20FE5D0061D5D8 /* LaunchScreen.xib in Resources */,
 				A70E12C71B20FE5D0061D5D8 /* Images.xcassets in Resources */,
+				A7E8C1EF1B27DA0B00EBAB49 /* seckey.gpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -413,7 +441,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A70E12C21B20FE5D0061D5D8 /* ViewController.m in Sources */,
-				A70E131F1B20FE880061D5D8 /* PGPLib.m in Sources */,
+				A7E8C1EA1B278B1300EBAB49 /* fmemopen.c in Sources */,
 				A70E131B1B20FE880061D5D8 /* ssh2pgp.c in Sources */,
 				A70E13171B20FE880061D5D8 /* packet-print.c in Sources */,
 				A70E131C1B20FE880061D5D8 /* symmetric.c in Sources */,

@@ -31,9 +31,9 @@ typedef NS_ENUM(NSUInteger, PGPMode) {
 #pragma mark Constructors
 
 + (instancetype)keyGenerator;
-+ (instancetype)decryptorWithArmoredPrivateKey:(NSString *)armoredPrivateKey;
++ (instancetype)decryptorWithPrivateKey:(NSString *)armoredPrivateKey;
 + (instancetype)encryptorWithUserId:(NSString *)userId;
-+ (instancetype)signerWithArmoredPrivateKey:(NSString *)armoredPrivateKey userId:(NSString *)userId;
++ (instancetype)signerWithPrivateKey:(NSString *)armoredPrivateKey userId:(NSString *)userId;
 + (instancetype)verifier;
 
 #pragma mark - Methods
@@ -50,5 +50,15 @@ typedef NS_ENUM(NSUInteger, PGPMode) {
           publicKey:(NSString *)publicKey
     completionBlock:(void(^)(NSData *result))completionBlock
          errorBlock:(void(^)(NSError *error))errorBlock;
+
+- (void)signData:(NSData *)data
+       publicKey:(NSString *)publicKey
+ completionBlock:(void(^)(NSData *result))completionBlock
+      errorBlock:(void(^)(NSError *error))errorBlock;
+
+- (void)verifyData:(NSData *)data
+         publicKey:(NSString *)publicKey
+   completionBlock:(void(^)(BOOL result))completionBlock
+        errorBlock:(void(^)(NSError *error))errorBlock;
 
 @end

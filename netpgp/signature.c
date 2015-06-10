@@ -1192,6 +1192,7 @@ pgp_sign_buf(pgp_io_t *io,
 		pgp_writer_close(output);
 		pgp_create_sig_delete(sig);
 	}
+    
 	return mem;
 }
 
