@@ -1039,10 +1039,16 @@ pgp_push_enc_se_ip(pgp_output_t *output, const pgp_key_t *pubkey, const char *ci
 	}
 
 	/* Create and write encrypted PK session key */
-	if ((encrypted_pk_sesskey = pgp_create_pk_sesskey(pubkey, cipher)) == NULL) {
+	if ((encrypted_pk_sesskey = pgp_only_create_pk_sesskey(pubkey, cipher)) == NULL) {
 		(void) fprintf(stderr, "pgp_push_enc_se_ip: null pk sesskey\n");
 		return 0;
 	}
+    
+    if ((encrypted_pk_sesskey = pgp_encrypt_pk_sesskey(pubkey, encrypted_pk_sesskey)) == NULL) {
+        (void) fprintf(stderr, "pgp_push_enc_se_ip: null pk sesskey\n");
+        return 0;
+    }
+    
 	pgp_write_pk_sesskey(output, encrypted_pk_sesskey);
 
 	/* Setup the se_ip */
@@ -1073,7 +1079,81 @@ pgp_push_enc_se_ip(pgp_output_t *output, const pgp_key_t *pubkey, const char *ci
 	return 1;
 }
 
-static unsigned 
+/**
+ \ingroup Core_WritersNext
+ \brief Push Encrypted SE IP Writer onto stack
+ */
+int
+pgp_push_enc_se_ip_multiple(pgp_output_t *output, const pgp_key_t *const *pubkeys, const size_t pubkeyc, const char *cipher)
+{
+    pgp_pk_sesskey_t *encrypted_pk_sesskey = NULL;
+    encrypt_se_ip_t *se_ip;
+    pgp_crypt_t	*encrypted;
+    uint8_t		*iv;
+    
+    if ((se_ip = calloc(1, sizeof(*se_ip))) == NULL) {
+        (void) fprintf(stderr, "pgp_push_enc_se_ip_multiple: bad alloc\n");
+        return 0;
+    }
+    
+    if (pubkeyc < 1) {
+        (void) fprintf(stderr, "pgp_push_enc_se_ip_multiple: pubkeyc < 1");
+    }
+    
+    for (int i = 0; i < pubkeyc; i++) {
+        if (encrypted_pk_sesskey) {
+            // Clear the existing session key.
+            free(encrypted_pk_sesskey);
+            encrypted_pk_sesskey = NULL;
+        }
+        
+        const pgp_key_t *pubkey = pubkeys[i];
+        
+        /* Create and write encrypted PK session key */
+        if ((encrypted_pk_sesskey = pgp_create_pk_sesskey(pubkey, cipher)) == NULL) {
+            (void) fprintf(stderr, "pgp_push_enc_se_ip_multiple: null pk sesskey\n");
+            return 0;
+        }
+        
+        pgp_write_pk_sesskey(output, encrypted_pk_sesskey);
+    }
+    
+    /* Setup the se_ip */
+    if ((encrypted = calloc(1, sizeof(*encrypted))) == NULL) {
+        free(se_ip);
+        (void) fprintf(stderr, "pgp_push_enc_se_ip_multiple: bad alloc\n");
+        return 0;
+    }
+    
+    if (!encrypted_pk_sesskey) {
+        (void) fprintf(stderr, "pgp_push_enc_se_ip_multiple: no sesskey\n");
+        return 0;
+    }
+    
+    pgp_crypt_any(encrypted, encrypted_pk_sesskey->symm_alg);
+    if ((iv = calloc(1, encrypted->blocksize)) == NULL) {
+        free(se_ip);
+        free(encrypted);
+        (void) fprintf(stderr, "pgp_push_enc_se_ip_multiple: bad alloc\n");
+        return 0;
+    }
+    encrypted->set_iv(encrypted, iv);
+    encrypted->set_crypt_key(encrypted, &encrypted_pk_sesskey->key[0]);
+    pgp_encrypt_init(encrypted);
+    
+    se_ip->crypt = encrypted;
+    
+    /* And push writer on stack */
+    pgp_writer_push(output, encrypt_se_ip_writer, NULL,
+                    encrypt_se_ip_destroyer, se_ip);
+    /* tidy up */
+    free(encrypted_pk_sesskey);
+    free(iv);
+    
+    return 1;
+}
+
+static unsigned
 encrypt_se_ip_writer(const uint8_t *src,
 		     unsigned len,
 		     pgp_error_t **errors,

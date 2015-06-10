@@ -91,7 +91,11 @@ unsigned pgp_write_litdata(pgp_output_t *,
 				const uint8_t *,
 				const int,
 				const pgp_litdata_enum);
+
 pgp_pk_sesskey_t *pgp_create_pk_sesskey(const pgp_key_t *, const char *);
+pgp_pk_sesskey_t *pgp_only_create_pk_sesskey(const pgp_key_t *, const char *);
+pgp_pk_sesskey_t *pgp_encrypt_pk_sesskey(const pgp_key_t *, pgp_pk_sesskey_t *);
+
 unsigned pgp_write_pk_sesskey(pgp_output_t *, pgp_pk_sesskey_t *);
 unsigned pgp_write_xfer_pubkey(pgp_output_t *,
 				const pgp_key_t *, const unsigned);

@@ -924,6 +924,153 @@ encode_m_buf(const uint8_t *M, size_t mLen, const pgp_pubkey_t * pubkey,
 
 /**
  \ingroup Core_Create
+ \brief Creates an pgp_pk_sesskey_t struct from keydata
+ \param key Keydata to use
+ \return pgp_pk_sesskey_t struct
+ \note It is the caller's responsiblity to free the returned pointer
+ \note Currently hard-coded to use CAST5
+ \note Currently hard-coded to use RSA
+ */
+pgp_pk_sesskey_t *
+pgp_create_pk_sesskey(const pgp_key_t *key, const char *ciphername)
+{
+    /*
+     * Creates a random session key and encrypts it for the given key
+     *
+     * Encryption used is PK,
+     * can be any, we're hardcoding RSA for now
+     */
+    
+    const pgp_pubkey_t	*pubkey;
+    pgp_pk_sesskey_t	*sesskey;
+    pgp_symm_alg_t	 cipher;
+    const uint8_t		*id;
+    pgp_crypt_t		 cipherinfo;
+    uint8_t			*unencoded_m_buf;
+    uint8_t			*encoded_m_buf;
+    size_t			 sz_encoded_m_buf;
+    
+    if (memcmp(key->encid, "\0\0\0\0\0\0\0\0", 8) == 0) {
+        pubkey = pgp_get_pubkey(key);
+        id = key->sigid;
+    } else {
+        pubkey = &key->enckey;
+        id = key->encid;
+    }
+    /* allocate unencoded_m_buf here */
+    (void) memset(&cipherinfo, 0x0, sizeof(cipherinfo));
+    pgp_crypt_any(&cipherinfo,
+                  cipher = pgp_str_to_cipher((ciphername) ? ciphername : "cast5"));
+    unencoded_m_buf = calloc(1, cipherinfo.keysize + 1 + 2);
+    if (unencoded_m_buf == NULL) {
+        (void) fprintf(stderr,
+                       "pgp_create_pk_sesskey: can't allocate\n");
+        return NULL;
+    }
+    switch(pubkey->alg) {
+        case PGP_PKA_RSA:
+            sz_encoded_m_buf = BN_num_bytes(pubkey->key.rsa.n);
+            break;
+        case PGP_PKA_DSA:
+        case PGP_PKA_ELGAMAL:
+            sz_encoded_m_buf = BN_num_bytes(pubkey->key.elgamal.p);
+            break;
+        default:
+            sz_encoded_m_buf = 0;
+            break;
+    }
+    if ((encoded_m_buf = calloc(1, sz_encoded_m_buf)) == NULL) {
+        (void) fprintf(stderr,
+                       "pgp_create_pk_sesskey: can't allocate\n");
+        free(unencoded_m_buf);
+        return NULL;
+    }
+    if ((sesskey = calloc(1, sizeof(*sesskey))) == NULL) {
+        (void) fprintf(stderr,
+                       "pgp_create_pk_sesskey: can't allocate\n");
+        free(unencoded_m_buf);
+        free(encoded_m_buf);
+        return NULL;
+    }
+    if (key->type != PGP_PTAG_CT_PUBLIC_KEY) {
+        (void) fprintf(stderr,
+                       "pgp_create_pk_sesskey: bad type\n");
+        free(unencoded_m_buf);
+        free(encoded_m_buf);
+        free(sesskey);
+        return NULL;
+    }
+    sesskey->version = PGP_PKSK_V3;
+    (void) memcpy(sesskey->key_id, id, sizeof(sesskey->key_id));
+    
+    if (pgp_get_debug_level(__FILE__)) {
+        hexdump(stderr, "Encrypting for keyid", id, sizeof(sesskey->key_id));
+    }
+    switch (pubkey->alg) {
+        case PGP_PKA_RSA:
+        case PGP_PKA_DSA:
+        case PGP_PKA_ELGAMAL:
+            break;
+        default:
+            (void) fprintf(stderr,
+                           "pgp_create_pk_sesskey: bad pubkey algorithm\n");
+            free(unencoded_m_buf);
+            free(encoded_m_buf);
+            free(sesskey);
+            return NULL;
+    }
+    sesskey->alg = pubkey->alg;
+    
+    sesskey->symm_alg = cipher;
+    pgp_random(sesskey->key, cipherinfo.keysize);
+    
+    if (pgp_get_debug_level(__FILE__)) {
+        hexdump(stderr, "sesskey created", sesskey->key,
+                cipherinfo.keysize + 1 + 2);
+    }
+    if (create_unencoded_m_buf(sesskey, &cipherinfo, &unencoded_m_buf[0]) == 0) {
+        free(unencoded_m_buf);
+        free(encoded_m_buf);
+        free(sesskey);
+        return NULL;
+    }
+    if (pgp_get_debug_level(__FILE__)) {
+        hexdump(stderr, "uuencoded m buf", unencoded_m_buf, cipherinfo.keysize + 1 + 2);
+    }
+    encode_m_buf(unencoded_m_buf, cipherinfo.keysize + 1 + 2, pubkey, encoded_m_buf);
+    
+    /* and encrypt it */
+    switch (key->key.pubkey.alg) {
+        case PGP_PKA_RSA:
+            if (!pgp_rsa_encrypt_mpi(encoded_m_buf, sz_encoded_m_buf, pubkey,
+                                     &sesskey->params)) {
+                free(unencoded_m_buf);
+                free(encoded_m_buf);
+                free(sesskey);
+                return NULL;
+            }
+            break;
+        case PGP_PKA_DSA:
+        case PGP_PKA_ELGAMAL:
+            if (!pgp_elgamal_encrypt_mpi(encoded_m_buf, sz_encoded_m_buf, pubkey,
+                                         &sesskey->params)) {
+                free(unencoded_m_buf);
+                free(encoded_m_buf);
+                free(sesskey);
+                return NULL;
+            }
+            break;
+        default:
+            /* will not get here - for lint only */
+            break;
+    }
+    free(unencoded_m_buf);
+    free(encoded_m_buf);
+    return sesskey;
+}
+
+/**
+ \ingroup Core_Create
 \brief Creates an pgp_pk_sesskey_t struct from keydata
 \param key Keydata to use
 \return pgp_pk_sesskey_t struct
@@ -932,7 +1079,7 @@ encode_m_buf(const uint8_t *M, size_t mLen, const pgp_pubkey_t * pubkey,
 \note Currently hard-coded to use RSA
 */
 pgp_pk_sesskey_t *
-pgp_create_pk_sesskey(const pgp_key_t *key, const char *ciphername)
+pgp_only_create_pk_sesskey(const pgp_key_t *key, const char *ciphername)
 {
 	/*
          * Creates a random session key and encrypts it for the given key
@@ -940,15 +1087,12 @@ pgp_create_pk_sesskey(const pgp_key_t *key, const char *ciphername)
          * Encryption used is PK,
          * can be any, we're hardcoding RSA for now
          */
-
+    
 	const pgp_pubkey_t	*pubkey;
 	pgp_pk_sesskey_t	*sesskey;
 	pgp_symm_alg_t	 cipher;
 	const uint8_t		*id;
 	pgp_crypt_t		 cipherinfo;
-	uint8_t			*unencoded_m_buf;
-	uint8_t			*encoded_m_buf;
-	size_t			 sz_encoded_m_buf;
 
 	if (memcmp(key->encid, "\0\0\0\0\0\0\0\0", 8) == 0) {
 		pubkey = pgp_get_pubkey(key);
@@ -959,44 +1103,17 @@ pgp_create_pk_sesskey(const pgp_key_t *key, const char *ciphername)
 	}
 	/* allocate unencoded_m_buf here */
 	(void) memset(&cipherinfo, 0x0, sizeof(cipherinfo));
+    
 	pgp_crypt_any(&cipherinfo,
 		cipher = pgp_str_to_cipher((ciphername) ? ciphername : "cast5"));
-	unencoded_m_buf = calloc(1, cipherinfo.keysize + 1 + 2);
-	if (unencoded_m_buf == NULL) {
-		(void) fprintf(stderr,
-			"pgp_create_pk_sesskey: can't allocate\n");
-		return NULL;
-	}
-	switch(pubkey->alg) {
-	case PGP_PKA_RSA:
-		sz_encoded_m_buf = BN_num_bytes(pubkey->key.rsa.n);
-		break;
-	case PGP_PKA_DSA:
-	case PGP_PKA_ELGAMAL:
-		sz_encoded_m_buf = BN_num_bytes(pubkey->key.elgamal.p);
-		break;
-	default:
-		sz_encoded_m_buf = 0;
-		break;
-	}
-	if ((encoded_m_buf = calloc(1, sz_encoded_m_buf)) == NULL) {
-		(void) fprintf(stderr,
-			"pgp_create_pk_sesskey: can't allocate\n");
-		free(unencoded_m_buf);
-		return NULL;
-	}
 	if ((sesskey = calloc(1, sizeof(*sesskey))) == NULL) {
 		(void) fprintf(stderr,
 			"pgp_create_pk_sesskey: can't allocate\n");
-		free(unencoded_m_buf);
-		free(encoded_m_buf);
 		return NULL;
 	}
 	if (key->type != PGP_PTAG_CT_PUBLIC_KEY) {
 		(void) fprintf(stderr,
 			"pgp_create_pk_sesskey: bad type\n");
-		free(unencoded_m_buf);
-		free(encoded_m_buf);
 		free(sesskey);
 		return NULL;
 	}
@@ -1014,8 +1131,6 @@ pgp_create_pk_sesskey(const pgp_key_t *key, const char *ciphername)
 	default:
 		(void) fprintf(stderr,
 			"pgp_create_pk_sesskey: bad pubkey algorithm\n");
-		free(unencoded_m_buf);
-		free(encoded_m_buf);
 		free(sesskey);
 		return NULL;
 	}
@@ -1027,46 +1142,90 @@ pgp_create_pk_sesskey(const pgp_key_t *key, const char *ciphername)
 	if (pgp_get_debug_level(__FILE__)) {
 		hexdump(stderr, "sesskey created", sesskey->key,
 			cipherinfo.keysize + 1 + 2);
-	}
-	if (create_unencoded_m_buf(sesskey, &cipherinfo, &unencoded_m_buf[0]) == 0) {
-		free(unencoded_m_buf);
-		free(encoded_m_buf);
-		free(sesskey);
-		return NULL;
-	}
-	if (pgp_get_debug_level(__FILE__)) {
-		hexdump(stderr, "uuencoded m buf", unencoded_m_buf, cipherinfo.keysize + 1 + 2);
-	}
-	encode_m_buf(unencoded_m_buf, cipherinfo.keysize + 1 + 2, pubkey, encoded_m_buf);
-
-	/* and encrypt it */
-	switch (key->key.pubkey.alg) {
-	case PGP_PKA_RSA:
-		if (!pgp_rsa_encrypt_mpi(encoded_m_buf, sz_encoded_m_buf, pubkey,
-				&sesskey->params)) {
-			free(unencoded_m_buf);
-			free(encoded_m_buf);
-			free(sesskey);
-			return NULL;
-		}
-		break;
-	case PGP_PKA_DSA:
-	case PGP_PKA_ELGAMAL:
-		if (!pgp_elgamal_encrypt_mpi(encoded_m_buf, sz_encoded_m_buf, pubkey,
-				&sesskey->params)) {
-			free(unencoded_m_buf);
-			free(encoded_m_buf);
-			free(sesskey);
-			return NULL;
-		}
-		break;
-	default:
-		/* will not get here - for lint only */
-		break;
-	}
-	free(unencoded_m_buf);
-	free(encoded_m_buf);
+    }
+    
 	return sesskey;
+}
+
+pgp_pk_sesskey_t *
+pgp_encrypt_pk_sesskey(const pgp_key_t *key, pgp_pk_sesskey_t *sesskey)
+{
+    const pgp_pubkey_t	*pubkey;
+    pgp_crypt_t		 cipherinfo;
+    uint8_t			*unencoded_m_buf;
+    uint8_t			*encoded_m_buf;
+    size_t			 sz_encoded_m_buf;
+    
+    unencoded_m_buf = calloc(1, cipherinfo.keysize + 1 + 2);
+    if (unencoded_m_buf == NULL) {
+        (void) fprintf(stderr,
+                       "pgp_create_pk_sesskey: can't allocate\n");
+        return NULL;
+    }
+    
+    switch(pubkey->alg) {
+        case PGP_PKA_RSA:
+            sz_encoded_m_buf = BN_num_bytes(pubkey->key.rsa.n);
+            break;
+        case PGP_PKA_DSA:
+        case PGP_PKA_ELGAMAL:
+            sz_encoded_m_buf = BN_num_bytes(pubkey->key.elgamal.p);
+            break;
+        default:
+            sz_encoded_m_buf = 0;
+            break;
+    }
+    
+    if ((encoded_m_buf = calloc(1, sz_encoded_m_buf)) == NULL) {
+        (void) fprintf(stderr,
+                       "pgp_create_pk_sesskey: can't allocate\n");
+        free(unencoded_m_buf);
+        return NULL;
+    }
+    
+    if (create_unencoded_m_buf(sesskey, &cipherinfo, &unencoded_m_buf[0]) == 0) {
+        free(unencoded_m_buf);
+        free(encoded_m_buf);
+        free(sesskey);
+        return NULL;
+    }
+    
+    if (pgp_get_debug_level(__FILE__)) {
+        hexdump(stderr, "uuencoded m buf", unencoded_m_buf, cipherinfo.keysize + 1 + 2);
+    }
+    
+    encode_m_buf(unencoded_m_buf, cipherinfo.keysize + 1 + 2, pubkey, encoded_m_buf);
+    
+    /* and encrypt it */
+    switch (key->key.pubkey.alg) {
+        case PGP_PKA_RSA:
+            if (!pgp_rsa_encrypt_mpi(encoded_m_buf, sz_encoded_m_buf, pubkey,
+                                     &sesskey->params)) {
+                free(unencoded_m_buf);
+                free(encoded_m_buf);
+                free(sesskey);
+                return NULL;
+            }
+            break;
+        case PGP_PKA_DSA:
+        case PGP_PKA_ELGAMAL:
+            if (!pgp_elgamal_encrypt_mpi(encoded_m_buf, sz_encoded_m_buf, pubkey,
+                                         &sesskey->params)) {
+                free(unencoded_m_buf);
+                free(encoded_m_buf);
+                free(sesskey);
+                return NULL;
+            }
+            break;
+        default:
+            /* will not get here - for lint only */
+            break;
+    }
+    
+    free(unencoded_m_buf);
+    free(encoded_m_buf);
+    
+    return sesskey;
 }
 
 /**

@@ -48,11 +48,11 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
         [self testEncryptionDecryptionWithPublicKey:publicKeyArmored privateKey:privateKeyArmored];
         [self testSignAndVerifyWithPublicKey:publicKeyArmored privateKey:privateKeyArmored];
         
-        NSString *publicPath = [[NSBundle mainBundle] pathForResource:@"pubkey" ofType:@"gpg"];
-        NSString *publicKey = [NSString stringWithContentsOfFile:publicPath encoding:NSUTF8StringEncoding error:nil];
-        
-        NSString *privatePath = [[NSBundle mainBundle] pathForResource:@"seckey" ofType:@"gpg"];
-        NSString *privateKey = [NSString stringWithContentsOfFile:privatePath encoding:NSUTF8StringEncoding error:nil];
+//        NSString *publicPath = [[NSBundle mainBundle] pathForResource:@"pubkey" ofType:@"gpg"];
+//        NSString *publicKey = [NSString stringWithContentsOfFile:publicPath encoding:NSUTF8StringEncoding error:nil];
+//        
+//        NSString *privatePath = [[NSBundle mainBundle] pathForResource:@"seckey" ofType:@"gpg"];
+//        NSString *privateKey = [NSString stringWithContentsOfFile:privatePath encoding:NSUTF8StringEncoding error:nil];
         
 //        [self testSignAndVerifyWithPublicKey:publicKey privateKey:privateKey];
         

@@ -356,24 +356,27 @@ static NSString *const PGPDefaultUsername = @"default-user";
         case PGPModeDecrypt:
             // Decrypt requires seckey:
             netpgp_setvar(_netpgp, "need seckey", "1");
+            netpgp_setvar(_netpgp, "cipher", "aes256");
             break;
             
         case PGPModeEncrypt:
             // Encrypt requires userid:
             netpgp_setvar(_netpgp, "need userid", "1");
             netpgp_setvar(_netpgp, "userid", self.userId.UTF8String);
+            netpgp_setvar(_netpgp, "cipher", "aes256");
             break;
             
         case PGPModeSign:
             // Sign requires userid and seckey:
             netpgp_setvar(_netpgp, "need seckey", "1");
             netpgp_setvar(_netpgp, "need userid", "1");
+            netpgp_setvar(_netpgp, "cipher", "aes256");
             
             netpgp_setvar(_netpgp, "userid", self.userId.UTF8String);
             break;
             
         case PGPModeVerify:
-            // Nothing special for verify.
+            netpgp_setvar(_netpgp, "cipher", "aes256");
             break;
     }
     
