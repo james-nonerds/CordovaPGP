@@ -429,6 +429,45 @@ pgp_encrypt_buf(pgp_io_t *io,
 	return outmem;
 }
 
+/* encrypt the contents of the input buffer, and return the mem structure */
+pgp_memory_t *
+pgp_encrypt_buf_multiple(pgp_io_t *io,
+                         const void *input,
+                         const size_t insize,
+                         const pgp_keyring_t *pubring,
+                         const unsigned use_armour,
+                         const char *cipher)
+{
+    pgp_output_t	*output;
+    pgp_memory_t	*outmem;
+    
+    __PGP_USED(io);
+    if (input == NULL) {
+        (void) fprintf(io->errs,
+                       "pgp_encrypt_buf: null memory\n");
+        return 0;
+    }
+    
+    pgp_setup_memory_write(&output, &outmem, insize);
+    
+    /* set armoured/not armoured here */
+    if (use_armour) {
+        pgp_writer_push_armor_msg(output);
+    }
+    
+    /* Push the encrypted writer */
+    pgp_push_enc_se_ip_multiple(output, pubring, cipher);
+    
+    /* This does the writing */
+    pgp_write(output, input, (unsigned)insize);
+    
+    /* tidy up */
+    pgp_writer_close(output);
+    pgp_output_delete(output);
+    
+    return outmem;
+}
+
 /**
    \ingroup HighLevel_Crypto
    \brief Decrypt a file.

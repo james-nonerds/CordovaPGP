@@ -36,6 +36,12 @@
 		A74D005C1B2101E2005BA9D8 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A74D005B1B2101E2005BA9D8 /* libz.dylib */; };
 		A74D005E1B210297005BA9D8 /* libbz2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A74D005D1B210297005BA9D8 /* libbz2.dylib */; };
 		A75DF0601B2733FB003DD526 /* PGP.m in Sources */ = {isa = PBXBuildFile; fileRef = A75DF05F1B2733FB003DD526 /* PGP.m */; };
+		A7B81C701B28DCEE0071044B /* bob.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C6D1B28DCEE0071044B /* bob.gpg */; };
+		A7B81C711B28DCEE0071044B /* steve.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C6E1B28DCEE0071044B /* steve.gpg */; };
+		A7B81C721B28DCEE0071044B /* suzy.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C6F1B28DCEE0071044B /* suzy.gpg */; };
+		A7B81C761B28DD960071044B /* bobsecret.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C731B28DD960071044B /* bobsecret.gpg */; };
+		A7B81C771B28DD960071044B /* stevesecret.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C741B28DD960071044B /* stevesecret.gpg */; };
+		A7B81C781B28DD960071044B /* suzysecret.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C751B28DD960071044B /* suzysecret.gpg */; };
 		A7E8C1EA1B278B1300EBAB49 /* fmemopen.c in Sources */ = {isa = PBXBuildFile; fileRef = A7E8C1E81B278B1300EBAB49 /* fmemopen.c */; };
 		A7E8C1ED1B27D9F000EBAB49 /* doc in Resources */ = {isa = PBXBuildFile; fileRef = A7E8C1EC1B27D9F000EBAB49 /* doc */; };
 		A7E8C1EF1B27DA0B00EBAB49 /* seckey.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7E8C1EE1B27DA0B00EBAB49 /* seckey.gpg */; };
@@ -111,6 +117,12 @@
 		A74D005D1B210297005BA9D8 /* libbz2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbz2.dylib; path = usr/lib/libbz2.dylib; sourceTree = SDKROOT; };
 		A75DF05E1B2733FB003DD526 /* PGP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PGP.h; sourceTree = "<group>"; };
 		A75DF05F1B2733FB003DD526 /* PGP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGP.m; sourceTree = "<group>"; };
+		A7B81C6D1B28DCEE0071044B /* bob.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bob.gpg; sourceTree = "<group>"; };
+		A7B81C6E1B28DCEE0071044B /* steve.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = steve.gpg; sourceTree = "<group>"; };
+		A7B81C6F1B28DCEE0071044B /* suzy.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = suzy.gpg; sourceTree = "<group>"; };
+		A7B81C731B28DD960071044B /* bobsecret.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bobsecret.gpg; sourceTree = "<group>"; };
+		A7B81C741B28DD960071044B /* stevesecret.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = stevesecret.gpg; sourceTree = "<group>"; };
+		A7B81C751B28DD960071044B /* suzysecret.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = suzysecret.gpg; sourceTree = "<group>"; };
 		A7E8C1E81B278B1300EBAB49 /* fmemopen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = fmemopen.c; sourceTree = "<group>"; };
 		A7E8C1E91B278B1300EBAB49 /* fmemopen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fmemopen.h; sourceTree = "<group>"; };
 		A7E8C1EC1B27D9F000EBAB49 /* doc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = doc; sourceTree = "<group>"; };
@@ -283,6 +295,19 @@
 			path = netpgp;
 			sourceTree = "<group>";
 		};
+		A7B81C791B28DDA10071044B /* keys */ = {
+			isa = PBXGroup;
+			children = (
+				A7B81C731B28DD960071044B /* bobsecret.gpg */,
+				A7B81C741B28DD960071044B /* stevesecret.gpg */,
+				A7B81C751B28DD960071044B /* suzysecret.gpg */,
+				A7B81C6D1B28DCEE0071044B /* bob.gpg */,
+				A7B81C6E1B28DCEE0071044B /* steve.gpg */,
+				A7B81C6F1B28DCEE0071044B /* suzy.gpg */,
+			);
+			name = keys;
+			sourceTree = "<group>";
+		};
 		A7E8C1EB1B278B1700EBAB49 /* fmemopen */ = {
 			isa = PBXGroup;
 			children = (
@@ -295,6 +320,7 @@
 		A7E8C1F01B27DA2400EBAB49 /* Demo resources */ = {
 			isa = PBXGroup;
 			children = (
+				A7B81C791B28DDA10071044B /* keys */,
 				A7E8C1EC1B27D9F000EBAB49 /* doc */,
 				A7E8C1EE1B27DA0B00EBAB49 /* seckey.gpg */,
 				A7E8C1F11B27DA5D00EBAB49 /* pubkey.gpg */,
@@ -387,9 +413,15 @@
 				A7E8C1F21B27DA5D00EBAB49 /* pubkey.gpg in Resources */,
 				A70E12C51B20FE5D0061D5D8 /* Main.storyboard in Resources */,
 				A7E8C1ED1B27D9F000EBAB49 /* doc in Resources */,
+				A7B81C771B28DD960071044B /* stevesecret.gpg in Resources */,
 				A70E12CA1B20FE5D0061D5D8 /* LaunchScreen.xib in Resources */,
 				A70E12C71B20FE5D0061D5D8 /* Images.xcassets in Resources */,
+				A7B81C701B28DCEE0071044B /* bob.gpg in Resources */,
 				A7E8C1EF1B27DA0B00EBAB49 /* seckey.gpg in Resources */,
+				A7B81C721B28DCEE0071044B /* suzy.gpg in Resources */,
+				A7B81C711B28DCEE0071044B /* steve.gpg in Resources */,
+				A7B81C781B28DD960071044B /* suzysecret.gpg in Resources */,
+				A7B81C761B28DD960071044B /* bobsecret.gpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

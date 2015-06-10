@@ -1123,6 +1123,7 @@ pgp_only_create_pk_sesskey(const pgp_key_t *key, const char *ciphername)
 	if (pgp_get_debug_level(__FILE__)) {
 		hexdump(stderr, "Encrypting for keyid", id, sizeof(sesskey->key_id));
 	}
+    
 	switch (pubkey->alg) {
 	case PGP_PKA_RSA:
 	case PGP_PKA_DSA:

@@ -32,7 +32,7 @@ typedef NS_ENUM(NSUInteger, PGPMode) {
 
 + (instancetype)keyGenerator;
 + (instancetype)decryptorWithPrivateKey:(NSString *)armoredPrivateKey;
-+ (instancetype)encryptorWithUserId:(NSString *)userId;
++ (instancetype)encryptor;
 + (instancetype)signerWithPrivateKey:(NSString *)armoredPrivateKey userId:(NSString *)userId;
 + (instancetype)verifier;
 
@@ -48,6 +48,11 @@ typedef NS_ENUM(NSUInteger, PGPMode) {
 
 - (void)encryptData:(NSData *)data
           publicKey:(NSString *)publicKey
+    completionBlock:(void(^)(NSData *result))completionBlock
+         errorBlock:(void(^)(NSError *error))errorBlock;
+
+- (void)encryptData:(NSData *)data
+         publicKeys:(NSArray *)publicKeys
     completionBlock:(void(^)(NSData *result))completionBlock
          errorBlock:(void(^)(NSError *error))errorBlock;
 

@@ -244,7 +244,11 @@ decrypt_cb(const pgp_packet_t *pkt, pgp_cbdata_t *cbinfo)
 		break;
 
 	case PGP_GET_PASSPHRASE:
-		(void) pgp_getpassphrase(decrypt->passfp, pass, sizeof(pass));
+        // NOTE: This is just to silence the "getpassphrase" on the command line.
+        // If you intend to add passphrases later, swap the comments this:
+        strcpy(pass, "");   // Silences passphrase.
+//		(void) pgp_getpassphrase(decrypt->passfp, pass, sizeof(pass));
+            
 		*content->skey_passphrase.passphrase = netpgp_strdup(pass);
 		pgp_forget(pass, (unsigned)sizeof(pass));
 		return PGP_KEEP_MEMORY;

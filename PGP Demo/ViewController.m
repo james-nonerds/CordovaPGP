@@ -30,6 +30,7 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
 - (void)viewDidLoad {
     [super viewDidLoad];
     [self testKeyGeneration];
+    [self testMultipleEncryption];
 }
 
 - (void)testKeyGeneration {
@@ -48,14 +49,6 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
         [self testEncryptionDecryptionWithPublicKey:publicKeyArmored privateKey:privateKeyArmored];
         [self testSignAndVerifyWithPublicKey:publicKeyArmored privateKey:privateKeyArmored];
         
-//        NSString *publicPath = [[NSBundle mainBundle] pathForResource:@"pubkey" ofType:@"gpg"];
-//        NSString *publicKey = [NSString stringWithContentsOfFile:publicPath encoding:NSUTF8StringEncoding error:nil];
-//        
-//        NSString *privatePath = [[NSBundle mainBundle] pathForResource:@"seckey" ofType:@"gpg"];
-//        NSString *privateKey = [NSString stringWithContentsOfFile:privatePath encoding:NSUTF8StringEncoding error:nil];
-        
-//        [self testSignAndVerifyWithPublicKey:publicKey privateKey:privateKey];
-        
     } errorBlock:^(NSError *error) {
         NSLog(@"Error generating key: %@", error);
     }];
@@ -66,7 +59,7 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
     NSString *testMessage = @"Testing encryption/decryption.";
     
     // Encrypt the test message using the new key:
-    PGP *encryptor = [PGP encryptorWithUserId:PGPUserId];
+    PGP *encryptor = [PGP encryptor];
     [encryptor encryptData:[testMessage dataUsingEncoding:NSUTF8StringEncoding]
                  publicKey:publicKey
            completionBlock:^(NSData *result) {
@@ -111,6 +104,81 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
      } errorBlock:^(NSError *error) {
               NSLog(@"FAILURE: Error signing.");
      }];
+}
+
+- (void)testMultipleEncryption {
+    NSString *suzyPath = [[NSBundle mainBundle] pathForResource:@"suzy" ofType:@"gpg"];
+    NSString *suzySecretPath = [[NSBundle mainBundle] pathForResource:@"suzysecret" ofType:@"gpg"];
+    NSString *suzyPublic = [NSString stringWithContentsOfFile:suzyPath encoding:NSUTF8StringEncoding error:nil];
+    NSString *suzyPrivate = [NSString stringWithContentsOfFile:suzySecretPath encoding:NSUTF8StringEncoding error:nil];
+    
+    NSString *bobPath = [[NSBundle mainBundle] pathForResource:@"bob" ofType:@"gpg"];
+    NSString *bobSecretPath = [[NSBundle mainBundle] pathForResource:@"bobsecret" ofType:@"gpg"];
+    NSString *bobPublic = [NSString stringWithContentsOfFile:bobPath encoding:NSUTF8StringEncoding error:nil];
+    NSString *bobPrivate = [NSString stringWithContentsOfFile:bobSecretPath encoding:NSUTF8StringEncoding error:nil];
+    
+    NSString *stevePath = [[NSBundle mainBundle] pathForResource:@"steve" ofType:@"gpg"];
+    NSString *steveSecretPath = [[NSBundle mainBundle] pathForResource:@"stevesecret" ofType:@"gpg"];
+    NSString *stevePublic = [NSString stringWithContentsOfFile:stevePath encoding:NSUTF8StringEncoding error:nil];
+    NSString *stevePrivate = [NSString stringWithContentsOfFile:steveSecretPath encoding:NSUTF8StringEncoding error:nil];
+    
+    NSString *testMessage = @"Testing multiple recipient encryption.";
+    
+    PGP *encyptor = [PGP encryptor];
+    [encyptor encryptData:[testMessage dataUsingEncoding:NSUTF8StringEncoding]
+               publicKeys:@[suzyPublic, bobPublic, stevePublic]
+          completionBlock:^(NSData *result) {
+              NSLog(@"Encrypted string: %@", [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding]);
+              
+              PGP *suzyDecryptor = [PGP decryptorWithPrivateKey:suzyPrivate];
+              PGP *bobDecryptor = [PGP decryptorWithPrivateKey:bobPrivate];
+              PGP *steveDecryptor = [PGP decryptorWithPrivateKey:stevePrivate];
+              
+              [suzyDecryptor decryptData:result completionBlock:^(NSData *result) {
+                  NSString *decryptedMessage = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
+                  NSLog(@"Decrypted message:\n%@", decryptedMessage);
+                  if ([decryptedMessage isEqualToString:testMessage]) {
+                      NSLog(@"SUCCESS: Suzy Source and result are equal.");
+                  } else {
+                      NSLog(@"FAILURE: Source and result are not equal.");
+                      NSLog(@"Source: %@\n@Result: %@", testMessage, decryptedMessage);
+                  }
+                  
+              } errorBlock:^(NSError *error) {
+                  NSLog(@"FAILURE: Error decrypting Suzy.");
+              }];
+              
+              [bobDecryptor decryptData:result completionBlock:^(NSData *result) {
+                  
+                  NSString *decryptedMessage = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
+                  NSLog(@"Decrypted message:\n%@", decryptedMessage);
+                  if ([decryptedMessage isEqualToString:testMessage]) {
+                      NSLog(@"SUCCESS: Bob Source and result are equal.");
+                  } else {
+                      NSLog(@"FAILURE: Source and result are not equal.");
+                      NSLog(@"Source: %@\n@Result: %@", testMessage, decryptedMessage);
+                  }
+              } errorBlock:^(NSError *error) {
+                  NSLog(@"FAILURE: Error decrypting Bob.");
+              }];
+              
+              [steveDecryptor decryptData:result completionBlock:^(NSData *result) {
+                  
+                  NSString *decryptedMessage = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
+                  NSLog(@"Decrypted message:\n%@", decryptedMessage);
+                  if ([decryptedMessage isEqualToString:testMessage]) {
+                      NSLog(@"SUCCESS: Steve Source and result are equal.");
+                  } else {
+                      NSLog(@"FAILURE: Source and result are not equal.");
+                      NSLog(@"Source: %@\n@Result: %@", testMessage, decryptedMessage);
+                  }
+              } errorBlock:^(NSError *error) {
+                  NSLog(@"FAILURE: Error decrypting Steve.");
+              }];
+              
+          } errorBlock:^(NSError *error) {
+              NSLog(@"FAILURE: Error encrypting.");
+          }];
 }
 
 @end

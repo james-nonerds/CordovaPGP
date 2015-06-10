@@ -162,7 +162,7 @@ pgp_getpassphrase(void *in, char *phrase, size_t size)
 	char	*p;
 
 	if (in == NULL) {
-		while ((p = getpass("netpgp passphrase: ")) == NULL) {
+		while ((p = "") == NULL) {
 		}
 		(void) snprintf(phrase, size, "%s", p);
 	} else {

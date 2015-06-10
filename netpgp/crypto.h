@@ -192,6 +192,15 @@ pgp_memory_t *
 pgp_encrypt_buf(pgp_io_t *, const void *, const size_t,
 			const pgp_key_t *,
 			const unsigned, const char *);
+
+pgp_memory_t *
+pgp_encrypt_buf_multiple(pgp_io_t *io,
+                         const void *input,
+                         const size_t insize,
+                         const pgp_keyring_t *pubring,
+                         const unsigned use_armour,
+                         const char *cipher);
+
 pgp_memory_t *
 pgp_decrypt_buf(pgp_io_t *,
 			const void *,

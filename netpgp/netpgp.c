@@ -1653,6 +1653,92 @@ netpgp_encrypt_memory(netpgp_t *netpgp,
 	pgp_memory_free(enc);
 	return (int)m;
 }
+/* encrypt some memory */
+int
+netpgp_encrypt_memory_single(netpgp_t *netpgp,
+                             void *in,
+                             const size_t insize,
+                             char *out,
+                             size_t outsize,
+                             int armored)
+{
+    const pgp_keyring_t *keyring;
+    const pgp_key_t	*keypair;
+    pgp_memory_t	*enc;
+    pgp_io_t	*io;
+    size_t		 m;
+    
+    io = netpgp->io;
+    if (in == NULL) {
+        (void) fprintf(io->errs,
+                       "netpgp_encrypt_buf: no memory to encrypt\n");
+        return 0;
+    }
+    
+    keyring = netpgp->pubring;
+    
+    if (keyring->keyc < 1) {
+        return 0;
+    }
+    if ((keypair = &keyring->keys[0]) == NULL) {
+        return 0;
+    }
+    
+    if (in == out) {
+        (void) fprintf(io->errs,
+                       "netpgp_encrypt_buf: input and output bufs need to be different\n");
+        return 0;
+    }
+    if (outsize < insize) {
+        (void) fprintf(io->errs,
+                       "netpgp_encrypt_buf: input size is larger than output size\n");
+        return 0;
+    }
+    enc = pgp_encrypt_buf(io, in, insize, keypair, (unsigned)armored,
+                          netpgp_getvar(netpgp, "cipher"));
+    m = MIN(pgp_mem_len(enc), outsize);
+    (void) memcpy(out, pgp_mem_data(enc), m);
+    pgp_memory_free(enc);
+    return (int)m;
+}
+
+int
+netpgp_encrypt_memory_multiple(netpgp_t *netpgp,
+                               void *in,
+                               const size_t insize,
+                               char *out,
+                               size_t outsize,
+                               int armored)
+{
+    pgp_memory_t	*enc;
+    pgp_io_t	*io;
+    size_t		 m;
+    
+    io = netpgp->io;
+    if (in == NULL) {
+        (void) fprintf(io->errs,
+                       "netpgp_encrypt_buf: no memory to encrypt\n");
+        return 0;
+    }
+    
+    if (in == out) {
+        (void) fprintf(io->errs,
+                       "netpgp_encrypt_buf: input and output bufs need to be different\n");
+        return 0;
+    }
+    if (outsize < insize) {
+        (void) fprintf(io->errs,
+                       "netpgp_encrypt_buf: input size is larger than output size\n");
+        return 0;
+    }
+    
+    enc = pgp_encrypt_buf_multiple(io, in, insize, netpgp->pubring, (unsigned) armored,
+                          netpgp_getvar(netpgp, "cipher"));
+    m = MIN(pgp_mem_len(enc), outsize);
+    (void) memcpy(out, pgp_mem_data(enc), m);
+    pgp_memory_free(enc);
+    return (int)m;
+}
 
 /* decrypt a chunk of memory */
 int

@@ -84,11 +84,8 @@ static NSString *const PGPDefaultUsername = @"default-user";
     return [pgp initNetPGPForMode:PGPModeDecrypt] ? pgp : nil;
 }
 
-+ (instancetype)encryptorWithUserId:(NSString *)userId {
++ (instancetype)encryptor{
     PGP *pgp = [self pgp];
-    
-    pgp.userId = userId;
-    
     return [pgp initNetPGPForMode:PGPModeEncrypt] ? pgp : nil;
 }
 
@@ -197,7 +194,30 @@ static NSString *const PGPDefaultUsername = @"default-user";
     NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
     
     void *outbuf = calloc(maxsize, sizeof(Byte));
-    int outsize = netpgp_encrypt_memory(self.netpgp, self.userId.UTF8String, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
+    int outsize = netpgp_encrypt_memory_single(self.netpgp, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
+    
+    if (outsize > 0) {
+        completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
+    } else {
+        errorBlock([PGP errorWithCause:@"Failed to encrypt."]);
+    }
+}
+
+
+- (void)encryptData:(NSData *)data
+         publicKeys:(NSArray *)publicKeys
+    completionBlock:(void(^)(NSData *result))completionBlock
+         errorBlock:(void(^)(NSError *error))errorBlock {
+    for (NSString *publicKey in publicKeys) {
+        if (![self importPublicKey:publicKey]) {
+            errorBlock([PGP errorWithCause:@"Failed to import"]);
+        }
+    }
+    
+    NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
+    
+    void *outbuf = calloc(maxsize, sizeof(Byte));
+    int outsize = netpgp_encrypt_memory_multiple(self.netpgp, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
     
     if (outsize > 0) {
         completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
@@ -361,8 +381,6 @@ static NSString *const PGPDefaultUsername = @"default-user";
             
         case PGPModeEncrypt:
             // Encrypt requires userid:
-            netpgp_setvar(_netpgp, "need userid", "1");
-            netpgp_setvar(_netpgp, "userid", self.userId.UTF8String);
             netpgp_setvar(_netpgp, "cipher", "aes256");
             break;
             
