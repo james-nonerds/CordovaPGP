@@ -12,11 +12,9 @@
  * @static
  */
 function generateKeyPair(options) {
-  cordova.exec(function(result) {
-
-  }, function(err) {
-
-  }, "CordovaPGP", "generateKeyPair", [options]);
+  return new Promise(function(resolve, reject) {
+    cordova.exec(resolve, reject, "CordovaPGP", "generateKeyPair", [options]);
+  });
 }
 
 
@@ -29,11 +27,9 @@ function generateKeyPair(options) {
  * @static
  */
 function signAndEncryptMessage(publicKeys, privateKey, text) {
-  cordova.exec(function(result) {
-
-  }, function(err) {
-
-  }, "CordovaPGP", "signAndEncryptMessage", [publicKeys, privateKey, text]);
+  return new Promise(function(resolve, reject) {
+    cordova.exec(resolve, reject, "CordovaPGP", "signAndEncryptMessage", [publicKeys, privateKey, text]);
+  });
 }
 
 
@@ -48,11 +44,9 @@ function signAndEncryptMessage(publicKeys, privateKey, text) {
  * @static
  */
 function decryptAndVerifyMessage(privateKey, publicKeys, msg) {
-  cordova.exec(function(result) {
-
-  }, function(err) {
-
-  }, "CordovaPGP", "signAndEncryptMessage", [privateKey, publicKeys, msg]);
+  return new Promise(function(resolve, reject) {
+    cordova.exec(resolve, reject, "CordovaPGP", "signAndEncryptMessage", [privateKey, publicKeys, msg]);
+  });
 }
 
 
