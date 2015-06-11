@@ -61,7 +61,8 @@
         <header-file src="src/ios/version.h"/>
         <source-file src="src/ios/writer.c"/>
         <header-file src="src/ios/writer.h"/>
-        <source-file src="src/ios/libPods-OpenSSL-Universal.a" framework="true" />
+        <source-file src="src/ios/libssl.a" framework="true" />
+        <source-file src="src/ios/libcrypto.a" framework="true" />
         <framework src="libz.dylib" />
         <framework src="libbz2.dylib" />
     </platform>
