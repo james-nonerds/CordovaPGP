@@ -14,11 +14,11 @@
 		<string>https://github.com/jknightco/CordovaPGP.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>PGP Demo.xcworkspace</string>
+	<string>CordovaPGP/src/ios/PGP Demo.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
 		<key>3224A5925A19C34C5ADC7171A5A0B8939A6BC1EE</key>
-		<string>..</string>
+		<string>../../../..</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
 	<string>https://github.com/jknightco/CordovaPGP.git</string>

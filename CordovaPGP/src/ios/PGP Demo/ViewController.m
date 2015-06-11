@@ -177,7 +177,6 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
                   // Check that the result is the same as the input:
                   NSString *decryptedMessage = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
                   
-                  NSLog(@"Decrypted message:\n%@", decryptedMessage);
                   if ([decryptedMessage isEqualToString:testMessage]) {
                       NSLog(@"SUCCESS: Steve Source and result are equal.");
                   } else {
