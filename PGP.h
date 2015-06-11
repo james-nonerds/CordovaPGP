@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
+
 FOUNDATION_EXPORT NSString *const PGPOptionKeyType;
 FOUNDATION_EXPORT NSString *const PGPOptionNumBits;
 FOUNDATION_EXPORT NSString *const PGPOptionUserId;
@@ -24,46 +25,57 @@ typedef NS_ENUM(NSUInteger, PGPMode) {
     PGPModeVerify
 };
 
+
 #pragma mark - PGP interface
+
 
 @interface PGP : NSObject
 
+
 #pragma mark Constructors
 
+
 + (instancetype)keyGenerator;
-+ (instancetype)decryptorWithPrivateKey:(NSString *)armoredPrivateKey;
++ (instancetype)decryptorWithPrivateKey:(NSString *)privateKey;
 + (instancetype)encryptor;
-+ (instancetype)signerWithPrivateKey:(NSString *)armoredPrivateKey userId:(NSString *)userId;
++ (instancetype)signerWithPrivateKey:(NSString *)privateKey;
 + (instancetype)verifier;
 
-#pragma mark - Methods
+
+#pragma mark - Basic methods
+
 
 - (void)generateKeysWithOptions:(NSDictionary *)options
-                completionBlock:(void(^)(NSString *publicKeyArmored, NSString *privateKeyArmored))completionBlock
+                completionBlock:(void(^)(NSString *publicKey, NSString *privateKey))completionBlock
                      errorBlock:(void(^)(NSError *error))errorBlock;
 
+
 - (void)decryptData:(NSData *)data
-    completionBlock:(void(^)(NSData *result))completionBlock
+    completionBlock:(void(^)(NSData *decryptedData))completionBlock
          errorBlock:(void(^)(NSError *error))errorBlock;
+
 
 - (void)encryptData:(NSData *)data
           publicKey:(NSString *)publicKey
-    completionBlock:(void(^)(NSData *result))completionBlock
+    completionBlock:(void(^)(NSData *encryptedData))completionBlock
          errorBlock:(void(^)(NSError *error))errorBlock;
+
 
 - (void)encryptData:(NSData *)data
          publicKeys:(NSArray *)publicKeys
-    completionBlock:(void(^)(NSData *result))completionBlock
+    completionBlock:(void(^)(NSData *encryptedData))completionBlock
          errorBlock:(void(^)(NSError *error))errorBlock;
 
+
 - (void)signData:(NSData *)data
-       publicKey:(NSString *)publicKey
- completionBlock:(void(^)(NSData *result))completionBlock
+ completionBlock:(void(^)(NSData *signedData))completionBlock
       errorBlock:(void(^)(NSError *error))errorBlock;
 
+
 - (void)verifyData:(NSData *)data
-         publicKey:(NSString *)publicKey
-   completionBlock:(void(^)(BOOL result))completionBlock
-        errorBlock:(void(^)(NSError *error))errorBlock;
+        publicKeys:(NSArray *)publicKeys
+   completionBlock:(void (^)(NSArray *verifiedKeys))completionBlock
+        errorBlock:(void (^)(NSError *))errorBlock;
+
 
 @end

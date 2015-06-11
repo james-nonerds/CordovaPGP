@@ -21,7 +21,7 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
 - (void)testSignAndVerifyWithPublicKey:(NSString *)publicKey
                              privateKey:(NSString *)privateKey;
 
-
+- (void)testMultipleEncryption;
 
 @end
 
@@ -42,7 +42,7 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
     PGP *keyGenerator = [PGP keyGenerator];
     [keyGenerator generateKeysWithOptions:options completionBlock:^(NSString *publicKeyArmored, NSString *privateKeyArmored) {
         // Print result:
-        NSLog(@"Generated keys.");
+        NSLog(@"SUCCESS: Generated keys.");
         NSLog(@"Public key:\n%@", publicKeyArmored);
         NSLog(@"Private key:\n%@", privateKeyArmored);
         
@@ -50,7 +50,7 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
         [self testSignAndVerifyWithPublicKey:publicKeyArmored privateKey:privateKeyArmored];
         
     } errorBlock:^(NSError *error) {
-        NSLog(@"Error generating key: %@", error);
+        NSLog(@"FAILURE: Error generating key: %@", error);
     }];
 }
 
@@ -68,8 +68,9 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
                // Decrypt the result:
                [decryptor decryptData:result
                       completionBlock:^(NSData *result) {
+                          
                           NSString *decryptedMessage = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
-                          NSLog(@"Decrypted message:\n%@", decryptedMessage);
+                          
                           if ([decryptedMessage isEqualToString:testMessage]) {
                               NSLog(@"SUCCESS: Source and result are equal.");
                           } else {
@@ -77,11 +78,11 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
                               NSLog(@"Source: %@\n@Result: %@", testMessage, decryptedMessage);
                           }
                       } errorBlock:^(NSError *error) {
-                          NSLog(@"FAILURE: Error decrypting.");
+                          NSLog(@"FAILURE: Error decrypting: %@", error);
                       }];
                
            } errorBlock:^(NSError *error) {
-               NSLog(@"FAILURE: Error encrypting.");
+               NSLog(@"FAILURE: Error encrypting: %@", error);
            }];
 }
 
@@ -90,23 +91,27 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
                              privateKey:(NSString *)privateKey {
     NSString *testMessage = @"Testing signing/verifying.";
     
-    PGP *signer = [PGP signerWithPrivateKey:privateKey userId:PGPUserId];
-    [signer signData:[testMessage dataUsingEncoding:NSUTF8StringEncoding] publicKey:publicKey completionBlock:^(NSData *result) {
-         NSLog(@"Signed data: %@",  [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding]);
+    PGP *signer = [PGP signerWithPrivateKey:privateKey];
+    [signer signData:[testMessage dataUsingEncoding:NSUTF8StringEncoding] completionBlock:^(NSData *result) {
+         NSLog(@"SUCCESS: Signed data: %@",  [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding]);
          
          PGP *verifier = [PGP verifier];
-        [verifier verifyData:result publicKey:publicKey completionBlock:^(BOOL verified) {
+        [verifier verifyData:result publicKeys:@[publicKey] completionBlock:^(NSArray *result) {
             
+            for (NSString *key in result) {
+                NSLog(@"SUCCESS: Valid key found:\n%@", key);
+            }
              
-         } errorBlock:^(NSError *error) {
-             
+        } errorBlock:^(NSError *error) {
+            NSLog(@"FAILURE: Error validating: %@", error);
          }];
      } errorBlock:^(NSError *error) {
-              NSLog(@"FAILURE: Error signing.");
+         NSLog(@"FAILURE: Error signing: %@", error);
      }];
 }
 
 - (void)testMultipleEncryption {
+    // Load keys:
     NSString *suzyPath = [[NSBundle mainBundle] pathForResource:@"suzy" ofType:@"gpg"];
     NSString *suzySecretPath = [[NSBundle mainBundle] pathForResource:@"suzysecret" ofType:@"gpg"];
     NSString *suzyPublic = [NSString stringWithContentsOfFile:suzyPath encoding:NSUTF8StringEncoding error:nil];
@@ -124,19 +129,22 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
     
     NSString *testMessage = @"Testing multiple recipient encryption.";
     
+    // Encrypt the data:
     PGP *encyptor = [PGP encryptor];
     [encyptor encryptData:[testMessage dataUsingEncoding:NSUTF8StringEncoding]
                publicKeys:@[suzyPublic, bobPublic, stevePublic]
           completionBlock:^(NSData *result) {
-              NSLog(@"Encrypted string: %@", [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding]);
+              
+              // Decrypt the result:
               
               PGP *suzyDecryptor = [PGP decryptorWithPrivateKey:suzyPrivate];
               PGP *bobDecryptor = [PGP decryptorWithPrivateKey:bobPrivate];
               PGP *steveDecryptor = [PGP decryptorWithPrivateKey:stevePrivate];
               
               [suzyDecryptor decryptData:result completionBlock:^(NSData *result) {
+                  // Check that the result is the same as the input:
                   NSString *decryptedMessage = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
-                  NSLog(@"Decrypted message:\n%@", decryptedMessage);
+                  
                   if ([decryptedMessage isEqualToString:testMessage]) {
                       NSLog(@"SUCCESS: Suzy Source and result are equal.");
                   } else {
@@ -145,26 +153,28 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
                   }
                   
               } errorBlock:^(NSError *error) {
-                  NSLog(@"FAILURE: Error decrypting Suzy.");
+                  NSLog(@"FAILURE: Error decrypting Suzy: %@", error);
               }];
               
               [bobDecryptor decryptData:result completionBlock:^(NSData *result) {
-                  
+                  // Check that the result is the same as the input:
                   NSString *decryptedMessage = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
-                  NSLog(@"Decrypted message:\n%@", decryptedMessage);
+                  
                   if ([decryptedMessage isEqualToString:testMessage]) {
                       NSLog(@"SUCCESS: Bob Source and result are equal.");
                   } else {
                       NSLog(@"FAILURE: Source and result are not equal.");
                       NSLog(@"Source: %@\n@Result: %@", testMessage, decryptedMessage);
                   }
+                  
               } errorBlock:^(NSError *error) {
-                  NSLog(@"FAILURE: Error decrypting Bob.");
+                  NSLog(@"FAILURE: Error decrypting Bob: %@", error);
               }];
               
               [steveDecryptor decryptData:result completionBlock:^(NSData *result) {
-                  
+                  // Check that the result is the same as the input:
                   NSString *decryptedMessage = [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
+                  
                   NSLog(@"Decrypted message:\n%@", decryptedMessage);
                   if ([decryptedMessage isEqualToString:testMessage]) {
                       NSLog(@"SUCCESS: Steve Source and result are equal.");
@@ -172,12 +182,13 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
                       NSLog(@"FAILURE: Source and result are not equal.");
                       NSLog(@"Source: %@\n@Result: %@", testMessage, decryptedMessage);
                   }
+                  
               } errorBlock:^(NSError *error) {
-                  NSLog(@"FAILURE: Error decrypting Steve.");
+                  NSLog(@"FAILURE: Error decrypting Steve: %@", error);
               }];
               
           } errorBlock:^(NSError *error) {
-              NSLog(@"FAILURE: Error encrypting.");
+              NSLog(@"FAILURE: Error encrypting: %@", error);
           }];
 }
 

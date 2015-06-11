@@ -471,27 +471,27 @@ resolve_userid(netpgp_t *netpgp, const pgp_keyring_t *keyring, const char *useri
 }
 
 /* append a key to a keyring */
-static int
-appendkey(pgp_io_t *io, pgp_key_t *key, char *ringfile)
-{
-	pgp_output_t	*create;
-	const unsigned	 noarmor = 0;
-	int		 fd;
-
-	if ((fd = pgp_setup_file_append(&create, ringfile)) < 0) {
-		fd = pgp_setup_file_write(&create, ringfile, 0);
-	}
-	if (fd < 0) {
-		(void) fprintf(io->errs, "can't open pubring '%s'\n", ringfile);
-		return 0;
-	}
-	if (!pgp_write_xfer_pubkey(create, key, noarmor)) {
-		(void) fprintf(io->errs, "Cannot write pubkey\n");
-		return 0;
-	}
-	pgp_teardown_file_write(create, fd);
-	return 1;
-}
+//static int
+//appendkey(pgp_io_t *io, pgp_key_t *key, char *ringfile)
+//{
+//	pgp_output_t	*create;
+//	const unsigned	 noarmor = 0;
+//	int		 fd;
+//
+//	if ((fd = pgp_setup_file_append(&create, ringfile)) < 0) {
+//		fd = pgp_setup_file_write(&create, ringfile, 0);
+//	}
+//	if (fd < 0) {
+//		(void) fprintf(io->errs, "can't open pubring '%s'\n", ringfile);
+//		return 0;
+//	}
+//	if (!pgp_write_xfer_pubkey(create, key, noarmor)) {
+//		(void) fprintf(io->errs, "Cannot write pubkey\n");
+//		return 0;
+//	}
+//	pgp_teardown_file_write(create, fd);
+//	return 1;
+//}
 
 /* return 1 if the file contains ascii-armoured text */
 static unsigned
@@ -751,41 +751,41 @@ formatbignum(char *buffer, BIGNUM *bn)
 #define INFINITE_ATTEMPTS	-1
 
 /* get the passphrase from the user */
-static int
-find_passphrase(FILE *passfp, const char *id, char *passphrase, size_t size, int attempts)
-{
-	char	 prompt[BUFSIZ];
-	char	 buf[128];
-	char	*cp;
-	int	 cc;
-	int	 i;
-
-	if (passfp) {
-		if (fgets(passphrase, (int)size, passfp) == NULL) {
-			return 0;
-		}
-		return (int)strlen(passphrase);
-	}
-	for (i = 0 ; i < attempts ; i++) {
-		(void) snprintf(prompt, sizeof(prompt), "Enter passphrase for %.16s: ", id);
-		if ((cp = getpass(prompt)) == NULL) {
-			break;
-		}
-		cc = snprintf(buf, sizeof(buf), "%s", cp);
-		(void) snprintf(prompt, sizeof(prompt), "Repeat passphrase for %.16s: ", id);
-		if ((cp = getpass(prompt)) == NULL) {
-			break;
-		}
-		cc = snprintf(passphrase, size, "%s", cp);
-		if (strcmp(buf, passphrase) == 0) {
-			(void) memset(buf, 0x0, sizeof(buf));
-			return cc;
-		}
-	}
-	(void) memset(buf, 0x0, sizeof(buf));
-	(void) memset(passphrase, 0x0, size);
-	return 0;
-}
+//static int
+//find_passphrase(FILE *passfp, const char *id, char *passphrase, size_t size, int attempts)
+//{
+//	char	 prompt[BUFSIZ];
+//	char	 buf[128];
+//	char	*cp;
+//	int	 cc;
+//	int	 i;
+//
+//	if (passfp) {
+//		if (fgets(passphrase, (int)size, passfp) == NULL) {
+//			return 0;
+//		}
+//		return (int)strlen(passphrase);
+//	}
+//	for (i = 0 ; i < attempts ; i++) {
+//		(void) snprintf(prompt, sizeof(prompt), "Enter passphrase for %.16s: ", id);
+//		if ((cp = getpass(prompt)) == NULL) {
+//			break;
+//		}
+//		cc = snprintf(buf, sizeof(buf), "%s", cp);
+//		(void) snprintf(prompt, sizeof(prompt), "Repeat passphrase for %.16s: ", id);
+//		if ((cp = getpass(prompt)) == NULL) {
+//			break;
+//		}
+//		cc = snprintf(passphrase, size, "%s", cp);
+//		if (strcmp(buf, passphrase) == 0) {
+//			(void) memset(buf, 0x0, sizeof(buf));
+//			return cc;
+//		}
+//	}
+//	(void) memset(buf, 0x0, sizeof(buf));
+//	(void) memset(passphrase, 0x0, size);
+//	return 0;
+//}
 
 /***************************************************************************/
 /* exported functions start here */
@@ -1476,7 +1476,6 @@ netpgp_verify_file(netpgp_t *netpgp, const char *in, const char *out, int armore
 /* sign some memory */
 int
 netpgp_sign_memory(netpgp_t *netpgp,
-		const char *userid,
 		char *mem,
 		size_t size,
 		char *out,
@@ -1485,7 +1484,6 @@ netpgp_sign_memory(netpgp_t *netpgp,
 		const unsigned cleartext)
 {
 	const pgp_key_t		*keypair;
-	const pgp_key_t		*pubkey;
 	pgp_seckey_t		*seckey;
 	pgp_memory_t		*signedmem;
 	const char		*hashalg;
@@ -1501,7 +1499,8 @@ netpgp_sign_memory(netpgp_t *netpgp,
 			"netpgp_sign_memory: no memory to sign\n");
 		return 0;
 	}
-	if ((keypair = resolve_userid(netpgp, netpgp->secring, userid)) == NULL) {
+    pgp_keyring_t *secring = netpgp->secring;
+	if ((keypair = &secring->keys[0]) == NULL) {
 		return 0;
 	}
 	ret = 1;
@@ -1512,19 +1511,6 @@ netpgp_sign_memory(netpgp_t *netpgp,
 		attempts = INFINITE_ATTEMPTS;
 	}
 	for (i = 0, seckey = NULL ; !seckey && (i < attempts || attempts == INFINITE_ATTEMPTS) ; i++) {
-		if (netpgp->passfp == NULL) {
-			/* print out the user id */
-			pubkey = pgp_getkeybyname(io, netpgp->pubring, userid);
-			if (pubkey == NULL) {
-				(void) fprintf(io->errs,
-					"netpgp: warning - using pubkey from secring\n");
-				pgp_print_keydata(io, netpgp->pubring, keypair, "signature ",
-					&keypair->key.seckey.pubkey, 0);
-			} else {
-				pgp_print_keydata(io, netpgp->pubring, pubkey, "signature ",
-					&pubkey->key.pubkey, 0);
-			}
-		}
 		/* now decrypt key */
 		seckey = pgp_decrypt_seckey(keypair, netpgp->passfp);
 		if (seckey == NULL) {
@@ -1561,14 +1547,11 @@ netpgp_sign_memory(netpgp_t *netpgp,
 
 /* verify memory */
 int
-netpgp_verify_memory(netpgp_t *netpgp, const void *in, const size_t size,
-			void *out, size_t outsize, const int armored)
+netpgp_verify_memory(netpgp_t *netpgp, const void *in, const size_t size, char **sigs, const int armored)
 {
 	pgp_validation_t	 result;
 	pgp_memory_t		*signedmem;
-	pgp_memory_t		*cat = NULL;
 	pgp_io_t		*io;
-	size_t			 m;
 	int			 ret;
 
 	(void) memset(&result, 0x0, sizeof(result));
@@ -1580,23 +1563,24 @@ netpgp_verify_memory(netpgp_t *netpgp, const void *in, const size_t size,
 	}
 	signedmem = pgp_memory_new();
 	pgp_memory_add(signedmem, in, size);
-	if (out) {
-		cat = pgp_memory_new();
-	}
-	ret = pgp_validate_mem(io, &result, signedmem,
-				(out) ? &cat : NULL,
-				armored, netpgp->pubring);
+	ret = pgp_validate_mem(io, &result, signedmem, NULL, armored, netpgp->pubring);
+    
 	/* signedmem is freed from pgp_validate_mem */
 	if (ret) {
-		resultp(io, "<stdin>", &result, netpgp->pubring);
-		if (out) {
-			m = MIN(pgp_mem_len(cat), outsize);
-			(void) memcpy(out, pgp_mem_data(cat), m);
-			pgp_memory_free(cat);
-		} else {
-			m = 1;
-		}
-		return (int)m;
+        unsigned from = 0;
+        unsigned saved_sigc = 0;
+        
+        // Get the pubkey out of the signature:
+        for (int i = 0; i < result.validc; i++) {
+            const pgp_sig_info_t *valid_sig = &result.valid_sigs[i];
+            const pgp_key_t *result_key = pgp_getkeybyid(io, netpgp->pubring, valid_sig->signer_id, &from, NULL);
+            
+            char *key_result = pgp_export_key(io, result_key, NULL);
+            sigs[saved_sigc++] = key_result;
+        }
+        
+        // Returns the number of keys:
+		return result.validc;
 	}
 	if (result.validc + result.invalidc + result.unknownc == 0) {
 		(void) fprintf(io->errs,
@@ -1609,6 +1593,7 @@ netpgp_verify_memory(netpgp_t *netpgp, const void *in, const size_t size,
 "memory verification failure: %u invalid signatures, %u unknown signatures\n",
 			result.invalidc, result.unknownc);
 	}
+    
 	return 0;
 }
 

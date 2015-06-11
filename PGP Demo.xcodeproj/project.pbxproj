@@ -42,7 +42,7 @@
 		A7B81C761B28DD960071044B /* bobsecret.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C731B28DD960071044B /* bobsecret.gpg */; };
 		A7B81C771B28DD960071044B /* stevesecret.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C741B28DD960071044B /* stevesecret.gpg */; };
 		A7B81C781B28DD960071044B /* suzysecret.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7B81C751B28DD960071044B /* suzysecret.gpg */; };
-		A7E8C1EA1B278B1300EBAB49 /* fmemopen.c in Sources */ = {isa = PBXBuildFile; fileRef = A7E8C1E81B278B1300EBAB49 /* fmemopen.c */; };
+		A7B81C7C1B29E63D0071044B /* CordovaPGP.m in Sources */ = {isa = PBXBuildFile; fileRef = A7B81C7B1B29E63D0071044B /* CordovaPGP.m */; };
 		A7E8C1ED1B27D9F000EBAB49 /* doc in Resources */ = {isa = PBXBuildFile; fileRef = A7E8C1EC1B27D9F000EBAB49 /* doc */; };
 		A7E8C1EF1B27DA0B00EBAB49 /* seckey.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7E8C1EE1B27DA0B00EBAB49 /* seckey.gpg */; };
 		A7E8C1F21B27DA5D00EBAB49 /* pubkey.gpg in Resources */ = {isa = PBXBuildFile; fileRef = A7E8C1F11B27DA5D00EBAB49 /* pubkey.gpg */; };
@@ -123,8 +123,8 @@
 		A7B81C731B28DD960071044B /* bobsecret.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bobsecret.gpg; sourceTree = "<group>"; };
 		A7B81C741B28DD960071044B /* stevesecret.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = stevesecret.gpg; sourceTree = "<group>"; };
 		A7B81C751B28DD960071044B /* suzysecret.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = suzysecret.gpg; sourceTree = "<group>"; };
-		A7E8C1E81B278B1300EBAB49 /* fmemopen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = fmemopen.c; sourceTree = "<group>"; };
-		A7E8C1E91B278B1300EBAB49 /* fmemopen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fmemopen.h; sourceTree = "<group>"; };
+		A7B81C7A1B29E63D0071044B /* CordovaPGP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CordovaPGP.h; sourceTree = "<group>"; };
+		A7B81C7B1B29E63D0071044B /* CordovaPGP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CordovaPGP.m; sourceTree = "<group>"; };
 		A7E8C1EC1B27D9F000EBAB49 /* doc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = doc; sourceTree = "<group>"; };
 		A7E8C1EE1B27DA0B00EBAB49 /* seckey.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = seckey.gpg; sourceTree = "<group>"; };
 		A7E8C1F11B27DA5D00EBAB49 /* pubkey.gpg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = pubkey.gpg; sourceTree = "<group>"; };
@@ -239,10 +239,11 @@
 		A70E12DF1B20FE6E0061D5D8 /* PGP Library */ = {
 			isa = PBXGroup;
 			children = (
-				A7E8C1EB1B278B1700EBAB49 /* fmemopen */,
 				A70E12E01B20FE880061D5D8 /* netpgp */,
 				A75DF05E1B2733FB003DD526 /* PGP.h */,
 				A75DF05F1B2733FB003DD526 /* PGP.m */,
+				A7B81C7A1B29E63D0071044B /* CordovaPGP.h */,
+				A7B81C7B1B29E63D0071044B /* CordovaPGP.m */,
 			);
 			name = "PGP Library";
 			sourceTree = "<group>";
@@ -306,15 +307,6 @@
 				A7B81C6F1B28DCEE0071044B /* suzy.gpg */,
 			);
 			name = keys;
-			sourceTree = "<group>";
-		};
-		A7E8C1EB1B278B1700EBAB49 /* fmemopen */ = {
-			isa = PBXGroup;
-			children = (
-				A7E8C1E81B278B1300EBAB49 /* fmemopen.c */,
-				A7E8C1E91B278B1300EBAB49 /* fmemopen.h */,
-			);
-			name = fmemopen;
 			sourceTree = "<group>";
 		};
 		A7E8C1F01B27DA2400EBAB49 /* Demo resources */ = {
@@ -473,7 +465,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A70E12C21B20FE5D0061D5D8 /* ViewController.m in Sources */,
-				A7E8C1EA1B278B1300EBAB49 /* fmemopen.c in Sources */,
 				A70E131B1B20FE880061D5D8 /* ssh2pgp.c in Sources */,
 				A70E13171B20FE880061D5D8 /* packet-print.c in Sources */,
 				A70E131C1B20FE880061D5D8 /* symmetric.c in Sources */,
@@ -484,6 +475,7 @@
 				A70E13101B20FE880061D5D8 /* crypto.c in Sources */,
 				A70E131D1B20FE880061D5D8 /* validate.c in Sources */,
 				A70E13121B20FE880061D5D8 /* misc.c in Sources */,
+				A7B81C7C1B29E63D0071044B /* CordovaPGP.m in Sources */,
 				A70E13131B20FE880061D5D8 /* mj.c in Sources */,
 				A70E13111B20FE880061D5D8 /* keyring.c in Sources */,
 				A70E13181B20FE880061D5D8 /* packet-show.c in Sources */,
