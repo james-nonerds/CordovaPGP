@@ -1,18 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
-        id="org.apache.cordova.device" version="0.2.3">
+        id="com.humanpractice.cordova.pgp" version="1.0.0">
     <name>PGP</name>
-    <description>Cordova NetPGP Plugin</description>
-    <license>BSD</license>
-    <keywords>cordova,netpgp,pgp</keywords>
-    <js-module src="www/openpgp.js" name="openpgp"></js-module>
+    <description>Cordova PGP Plugin</description>
+    <author>James Knight (james@gradient.nyc)</author>
+    <keywords>cordova,netpgp,pgp,openpgp</keywords>
+    <license>MIT</license>
+    <js-module src="www/netpgp.js" name="netpgp"></js-module>
     <platform name="ios">
         <config-file target="config.xml" parent="/*">
             <feature name="Device">
                 <param name="ios-package" value="CDVPGP"/>
             </feature>
         </config-file>
-        <header-file src="src/ios/CDVPGP.h" />
-        <source-file src="src/ios/CDVPGP.m" />
+        <header-file src="src/ios/CordovaPGP.h" />
+        <source-file src="src/ios/libCordovaPGPLib.a" framework="true" />
+        <source-file src="src/ios/libPods-Cordova.a" framework="true" />
+        <source-file src="src/ios/libPods-OpenSSL-Universal.a" framework="true" />
+        <source-file src="src/ios/libPods.a" framework="true" />
+        <framework src="libz.dylib" />
+        <framework src="libbz2.dylib" />
     </platform>
 </plugin>
