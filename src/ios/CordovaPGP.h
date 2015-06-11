@@ -15,10 +15,13 @@
 
 @interface CordovaPGP : CDVPlugin
 
+
 #pragma mark Methods
+
 
 - (void)generateKeyPair:(CDVInvokedUrlCommand *)command;
 - (void)signAndEncryptMessage:(CDVInvokedUrlCommand *)command;
 - (void)decryptAndVerifyMessage:(CDVInvokedUrlCommand *)command;
+
 
 @end
