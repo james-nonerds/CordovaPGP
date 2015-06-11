@@ -15,7 +15,6 @@
         </config-file>
         <header-file src="src/ios/CordovaPGP.h" />
         <source-file src="src/ios/libCordovaPGPLib.a" framework="true" />
-        <source-file src="src/ios/libPods-Cordova.a" framework="true" />
         <source-file src="src/ios/libPods-OpenSSL-Universal.a" framework="true" />
         <source-file src="src/ios/libPods.a" framework="true" />
         <framework src="libz.dylib" />
