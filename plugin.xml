@@ -9,8 +9,8 @@
     <js-module src="www/openpgp.js" name="openpgp"></js-module>
     <platform name="ios">
         <config-file target="config.xml" parent="/*">
-            <feature name="Device">
-                <param name="ios-package" value="CDVPGP"/>
+            <feature name="CordovaPGP">
+                <param name="ios-package" value="CordovaPGP"/>
             </feature>
         </config-file>
         <header-file src="src/ios/CordovaPGP.h"/>
