@@ -11,10 +11,8 @@
  * @return {Promise<Object>} {key: module:key~Key, privateKeyArmored: String, publicKeyArmored: String}
  * @static
  */
-function generateKeyPair(options) {
-  return new Promise(function(resolve, reject) {
-    cordova.exec(resolve, reject, "CordovaPGP", "generateKeyPair", [options]);
-  });
+function generateKeyPair(options, success, failure) {
+  cordova.exec(success, failure, "CordovaPGP", "generateKeyPair", [options]);
 }
 
 
@@ -26,10 +24,8 @@ function generateKeyPair(options) {
  * @return {Promise<String>}   encrypted ASCII armored message
  * @static
  */
-function signAndEncryptMessage(publicKeys, privateKey, text) {
-  return new Promise(function(resolve, reject) {
-    cordova.exec(resolve, reject, "CordovaPGP", "signAndEncryptMessage", [publicKeys, privateKey, text]);
-  });
+function signAndEncryptMessage(publicKeys, privateKey, text, success, failure) {
+  cordova.exec(success, failure, "CordovaPGP", "signAndEncryptMessage", [publicKeys, privateKey, text]);
 }
 
 
@@ -43,10 +39,8 @@ function signAndEncryptMessage(publicKeys, privateKey, text) {
  *                              with verified signatures or null if no literal data found
  * @static
  */
-function decryptAndVerifyMessage(privateKey, publicKeys, msg) {
-  return new Promise(function(resolve, reject) {
-    cordova.exec(resolve, reject, "CordovaPGP", "signAndEncryptMessage", [privateKey, publicKeys, msg]);
-  });
+function decryptAndVerifyMessage(privateKey, publicKeys, msg, success, failure) {
+  cordova.exec(success, failure, "CordovaPGP", "signAndEncryptMessage", [privateKey, publicKeys, msg]);
 }
 
 
