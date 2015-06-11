@@ -84,7 +84,7 @@ typedef void (^CordovaPGPErrorBlock)(NSError *);
         [decryptor decryptData:[msg dataUsingEncoding:NSUTF8StringEncoding] completionBlock:^(NSData *decryptedData) {
             
             PGP *verifier = [PGP verifier];
-            [verifier verifyData:decryptedData publicKeys:publicKeys completionBlock:^(NSArray *verifiedKeys) {
+            [verifier verifyData:decryptedData publicKeys:publicKeys completionBlock:^(NSData *verifiedData, NSArray *verifiedKeys) {
                 
                 // TODO: Change verifyData so that it returns the message as well!
                 

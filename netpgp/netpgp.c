@@ -1547,11 +1547,17 @@ netpgp_sign_memory(netpgp_t *netpgp,
 
 /* verify memory */
 int
-netpgp_verify_memory(netpgp_t *netpgp, const void *in, const size_t size, char **sigs, const int armored)
+netpgp_verify_memory(netpgp_t *netpgp,
+                     const void *in, const size_t size,
+                     void *out, size_t outsize,
+                     char **sigs, size_t *sigc,
+                     const int armored)
 {
 	pgp_validation_t	 result;
-	pgp_memory_t		*signedmem;
-	pgp_io_t		*io;
+    pgp_memory_t		*signedmem;
+    pgp_memory_t		*cat = NULL;
+    pgp_io_t		*io;
+    size_t			 m;
 	int			 ret;
 
 	(void) memset(&result, 0x0, sizeof(result));
@@ -1562,11 +1568,23 @@ netpgp_verify_memory(netpgp_t *netpgp, const void *in, const size_t size, char *
 		return 0;
 	}
 	signedmem = pgp_memory_new();
-	pgp_memory_add(signedmem, in, size);
-	ret = pgp_validate_mem(io, &result, signedmem, NULL, armored, netpgp->pubring);
+    pgp_memory_add(signedmem, in, size);
+    if (out) {
+        cat = pgp_memory_new();
+    }
+    
+    ret = pgp_validate_mem(io, &result, signedmem, (out) ? &cat : NULL, armored, netpgp->pubring);
     
 	/* signedmem is freed from pgp_validate_mem */
-	if (ret) {
+    if (ret) {
+        if (out) {
+            m = MIN(pgp_mem_len(cat), outsize);
+            (void) memcpy(out, pgp_mem_data(cat), m);
+            pgp_memory_free(cat);
+        } else {
+            m = 1;
+        }
+        
         unsigned from = 0;
         unsigned saved_sigc = 0;
         
@@ -1579,8 +1597,9 @@ netpgp_verify_memory(netpgp_t *netpgp, const void *in, const size_t size, char *
             sigs[saved_sigc++] = key_result;
         }
         
-        // Returns the number of keys:
-		return result.validc;
+        *sigc = result.validc;
+        
+		return (int) m;
 	}
 	if (result.validc + result.invalidc + result.unknownc == 0) {
 		(void) fprintf(io->errs,

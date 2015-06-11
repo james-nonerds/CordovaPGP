@@ -74,7 +74,7 @@ typedef NS_ENUM(NSUInteger, PGPMode) {
 
 - (void)verifyData:(NSData *)data
         publicKeys:(NSArray *)publicKeys
-   completionBlock:(void (^)(NSArray *verifiedKeys))completionBlock
+   completionBlock:(void (^)(NSData *verifiedData, NSArray *verifiedKeys))completionBlock
         errorBlock:(void (^)(NSError *))errorBlock;
 
 

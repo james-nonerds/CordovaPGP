@@ -297,7 +297,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
 
 - (void)verifyData:(NSData *)data
         publicKeys:(NSArray *)publicKeys
-   completionBlock:(void (^)(NSArray *))completionBlock
+   completionBlock:(void (^)(NSData *, NSArray *))completionBlock
         errorBlock:(void (^)(NSError *))errorBlock {
     
     if (data == nil || publicKeys == nil) {
@@ -325,7 +325,15 @@ static NSString *const PGPDefaultUsername = @"default-user";
         return;
     }
     
-    int validSignatureCount = netpgp_verify_memory(self.netpgp, data.bytes, data.length, resultKeys, 0);
+    NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
+    void *outbuf = calloc(maxsize, sizeof(Byte));
+    
+    size_t validSignatureCount;
+    int outsize = netpgp_verify_memory(self.netpgp,
+                                       data.bytes, data.length,
+                                       outbuf, maxsize,
+                                       resultKeys, &validSignatureCount,
+                                       0);
     
     NSMutableArray *validSignatureKeys = [NSMutableArray array];
     
@@ -343,7 +351,8 @@ static NSString *const PGPDefaultUsername = @"default-user";
         resultKeys = NULL;
     }
     
-    completionBlock([NSArray arrayWithArray:validSignatureKeys]);
+    completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES],
+                    [NSArray arrayWithArray:validSignatureKeys]);
 }
 
 

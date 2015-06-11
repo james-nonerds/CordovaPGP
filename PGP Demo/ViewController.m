@@ -96,9 +96,11 @@ static NSString *const PGPUserId = @"James Knight <james@jknight.co>";
          NSLog(@"SUCCESS: Signed data: %@",  [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding]);
          
          PGP *verifier = [PGP verifier];
-        [verifier verifyData:result publicKeys:@[publicKey] completionBlock:^(NSArray *result) {
+        [verifier verifyData:result publicKeys:@[publicKey] completionBlock:^(NSData *verifiedData, NSArray *verifiedKeys) {
             
-            for (NSString *key in result) {
+            NSLog(@"SUCCESS: Verified data: %@", [[NSString alloc] initWithData:verifiedData encoding:NSUTF8StringEncoding]);
+            
+            for (NSString *key in verifiedKeys) {
                 NSLog(@"SUCCESS: Valid key found:\n%@", key);
             }
              
