@@ -40,7 +40,7 @@ function signAndEncryptMessage(publicKeys, privateKey, text, success, failure) {
  * @static
  */
 function decryptAndVerifyMessage(privateKey, publicKeys, msg, success, failure) {
-  cordova.exec(success, failure, "CordovaPGP", "signAndEncryptMessage", [privateKey, publicKeys, msg]);
+  cordova.exec(success, failure, "CordovaPGP", "decryptAndVerifyMessage", [privateKey, publicKeys, msg]);
 }
 
 
