@@ -456,7 +456,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
     
     netpgp_setvar(_netpgp, "hash", DEFAULT_HASH_ALG);
     netpgp_setvar(_netpgp, "max mem alloc", "4194304");
-//    netpgp_setvar(_netpgp, "res", self.outPath.UTF8String);
+    netpgp_setvar(_netpgp, "res", self.outPath.UTF8String);
     
     switch (mode) {
         case PGPModeGenerate:
