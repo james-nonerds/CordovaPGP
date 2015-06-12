@@ -31,6 +31,31 @@ typedef void (^CordovaPGPErrorBlock)(NSError *);
 #pragma mark Methods
 
 
+- (void)generateKeyPair:(CDVInvokedUrlCommand *)command {
+    
+    // Define error callback:
+    CordovaPGPErrorBlock errorBlock = [self createErrorBlockForCommand:command];
+    
+    // Perform command:
+    [self.commandDelegate runInBackground:^{
+        NSDictionary *options = [command.arguments objectAtIndex:0];
+        
+        PGP *generator = [PGP keyGenerator];
+        [generator generateKeysWithOptions:options completionBlock:^(NSString *publicKey, NSString *privateKey) {
+            
+            NSDictionary *keys = @{@"privateKeyArmored": privateKey,
+                                   @"publicKeyArmored": publicKey};
+            
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                          messageAsDictionary:keys];
+            
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            
+        } errorBlock:errorBlock];
+    }];
+}
+
+
 - (void)signAndEncryptMessage:(CDVInvokedUrlCommand *)command {
     
     // Define error callback:
@@ -93,38 +118,14 @@ typedef void (^CordovaPGPErrorBlock)(NSError *);
                 
                 NSString *verifiedMessage = [[NSString alloc] initWithData:verifiedData encoding:NSUTF8StringEncoding];
                 
-                NSArray *result = @[verifiedMessage, verifiedKeys];
+                NSDictionary *result = @{@"text": verifiedMessage, @"signatures": verifiedKeys};
                 
                 CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                                                  messageAsArray:result];
+                                                              messageAsDictionary:result];
                 
                 [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
                 
             } errorBlock:errorBlock];
-            
-        } errorBlock:errorBlock];
-    }];
-}
-
-
-- (void)generateKeyPair:(CDVInvokedUrlCommand *)command {
-    
-    // Define error callback:
-    CordovaPGPErrorBlock errorBlock = [self createErrorBlockForCommand:command];
-    
-    // Perform command:
-    [self.commandDelegate runInBackground:^{
-        NSDictionary *options = [command.arguments objectAtIndex:0];
-        
-        PGP *generator = [PGP keyGenerator];
-        [generator generateKeysWithOptions:options completionBlock:^(NSString *publicKey, NSString *privateKey) {
-            
-            NSArray *keys = @[privateKey, publicKey];
-            
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                                               messageAsArray:keys];
-            
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             
         } errorBlock:errorBlock];
     }];
