@@ -6,6 +6,7 @@
     <author>James Knight (james@gradient.nyc)</author>
     <keywords>cordova,netpgp,pgp,openpgp</keywords>
     <license>MIT</license>
+    <dependency id="com.vladstirbu.cordova.promise" url="https://github.com/vstirbu/PromisesPlugin.git"></dependency>
     <js-module src="www/openpgp.js" name="openpgp">
         <clobbers target="openpgp" />
     </js-module>

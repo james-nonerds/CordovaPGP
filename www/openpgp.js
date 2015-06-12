@@ -1,4 +1,5 @@
 
+var Promise = window.Promise;
 /**
  * Generates a new OpenPGP key pair. Currently only supports RSA keys.
  * Primary and subkey will be of same type.
@@ -11,8 +12,10 @@
  * @return {Promise<Object>} {key: module:key~Key, privateKeyArmored: String, publicKeyArmored: String}
  * @static
  */
-function generateKeyPair(options, success, failure) {
-  cordova.exec(success, failure, "CordovaPGP", "generateKeyPair", [options]);
+function generateKeyPair(options) {
+  return new Promise(function (success, failure) {
+    cordova.exec(success, failure, "CordovaPGP", "generateKeyPair", [options]);
+  });
 }
 
 
@@ -24,8 +27,10 @@ function generateKeyPair(options, success, failure) {
  * @return {Promise<String>}   encrypted ASCII armored message
  * @static
  */
-function signAndEncryptMessage(publicKeys, privateKey, text, success, failure) {
-  cordova.exec(success, failure, "CordovaPGP", "signAndEncryptMessage", [publicKeys, privateKey, text]);
+function signAndEncryptMessage(publicKeys, privateKey, text) {
+  return new Promise(function (success, failure) {
+    cordova.exec(success, failure, "CordovaPGP", "signAndEncryptMessage", [publicKeys, privateKey, text]);
+  });
 }
 
 
@@ -39,8 +44,10 @@ function signAndEncryptMessage(publicKeys, privateKey, text, success, failure) {
  *                              with verified signatures or null if no literal data found
  * @static
  */
-function decryptAndVerifyMessage(privateKey, publicKeys, msg, success, failure) {
-  cordova.exec(success, failure, "CordovaPGP", "decryptAndVerifyMessage", [privateKey, publicKeys, msg]);
+function decryptAndVerifyMessage(privateKey, publicKeys, msg) {
+  return new Promise(function (success, failure) {
+    cordova.exec(success, failure, "CordovaPGP", "decryptAndVerifyMessage", [privateKey, publicKeys, msg]);
+  });
 }
 
 
