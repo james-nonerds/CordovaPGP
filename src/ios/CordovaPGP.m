@@ -113,12 +113,18 @@ typedef void (^CordovaPGPErrorBlock)(NSError *);
             // Verify the decrypted data:
             PGP *verifier = [PGP verifier];
             
-            [verifier verifyData:decryptedData publicKeys:publicKeys completionBlock:^(NSData *verifiedData, NSArray *verifiedKeys) {
+            [verifier verifyData:decryptedData publicKeys:publicKeys completionBlock:^(NSData *verifiedData, NSArray *verifiedKeyIds) {
                 // Return the verified data as well as a list of keys which had signed it:
                 
                 NSString *verifiedMessage = [[NSString alloc] initWithData:verifiedData encoding:NSUTF8StringEncoding];
                 
-                NSDictionary *result = @{@"text": verifiedMessage, @"signatures": verifiedKeys};
+                NSMutableArray *verifiedSignatures = [NSMutableArray array];
+                
+                for (NSString *keyId in verifiedKeyIds) {
+                    [verifiedSignatures addObject:@{@"keyid": keyId, @"valid": @YES}];
+                }
+                
+                NSDictionary *result = @{@"text": verifiedMessage, @"signatures": [NSArray arrayWithArray:verifiedSignatures]};
                 
                 CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                               messageAsDictionary:result];
