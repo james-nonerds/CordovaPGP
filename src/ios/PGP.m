@@ -346,8 +346,8 @@ static NSString *const PGPDefaultUsername = @"default-user";
         char *verifiedKeyId = resultKeyIds[i];
         
         if (verifiedKeyId) {
-            NSString *verifiedKeyIdString = [NSString stringWithCString:verifiedKeyId encoding:NSUTF8StringEncoding];
-            [verifiedKeyIds addObject:verifiedKeyIdString];
+            NSString *userId = [self userIdForKeyId:verifiedKeyId];
+            [verifiedKeyIds addObject:userId];
             
             free(verifiedKeyId);
             resultKeyIds[i] = NULL;
@@ -369,7 +369,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
 
 - (void)decryptAndVerifyData:(NSData *)data
                   publicKeys:(NSArray *)publicKeys
-             completionBlock:(void (^)(NSString *decryptedMessage, NSArray *verifiedKeyIds))completionBlock
+             completionBlock:(void (^)(NSString *, NSArray *))completionBlock
                   errorBlock:(void (^)(NSError *))errorBlock {
     
     
@@ -414,17 +414,30 @@ static NSString *const PGPDefaultUsername = @"default-user";
         } else {
             size_t message_size = outsize - KEY_ID_LENGTH;
             
+            char key_id[KEY_ID_LENGTH + 1];
+            memcpy(key_id, outbuf + message_size, KEY_ID_LENGTH);
+            key_id[KEY_ID_LENGTH] = '\0';
             
             NSData *messageData = [NSData dataWithBytesNoCopy:outbuf length:message_size freeWhenDone:NO];
-            NSData *signerData = [NSData dataWithBytesNoCopy:outbuf + message_size length:KEY_ID_LENGTH freeWhenDone:NO];
-            
-            completionBlock([[NSString alloc] initWithData:messageData encoding:NSUTF8StringEncoding], @[[[NSString alloc] initWithData:signerData encoding:NSUTF8StringEncoding]]);
+            NSString *userId = [self userIdForKeyId:key_id];
+                        
+            completionBlock([[NSString alloc] initWithData:messageData encoding:NSUTF8StringEncoding], @[userId]);
         }
         
     } else {
         errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to decrypt."]);
     }
 }
+
+- (NSString *)userIdForKeyId:(char *)key_id {
+    
+    char user_id[256];
+    memset(user_id, 0, 256);
+    
+    netpgp_userid_for_keyid(self.netpgp, key_id, user_id);
+    return [NSString stringWithCString:user_id encoding:NSUTF8StringEncoding];
+}
+
 - (BOOL)isArmored:(NSString *)text {
     return [text containsString:@"-----BEGIN PGP MESSAGE-----"];
 }

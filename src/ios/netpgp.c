@@ -1277,6 +1277,18 @@ netpgp_generate_key(netpgp_t *netpgp, char *id, int numbits)
 	return 1;
 }
 
+void netpgp_userid_for_keyid(netpgp_t *netpgp, const char *key_id, char *user_id) {
+    uint8_t binary_id[8];
+    memset(binary_id, 0, sizeof(uint8_t) * 8);
+    
+    const pgp_key_t *key = pgp_getkeybyname(netpgp->io, netpgp->pubring, key_id);
+    
+    if (key != NULL) {
+        const uint8_t *uid = pgp_get_userid(key, 0);
+        snprintf(user_id, sizeof(char) * 255, "%s", uid);
+    }
+}
+
 /* encrypt a file */
 int
 netpgp_encrypt_file(netpgp_t *netpgp,

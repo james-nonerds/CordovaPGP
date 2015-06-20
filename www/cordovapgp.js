@@ -39,7 +39,7 @@ function signAndEncryptMessage(publicKeys, privateKey, text) {
  * @param  {module:key~Key}     privateKey private key with decrypted secret key data
  * @param  {(Array<module:key~Key>|module:key~Key)}  publicKeys array of keys or single key, to verify signatures
  * @param  {module:message~Message} msg    the message object with signed and encrypted data
- * @return {Promise<{text: String, signatures: Array<{keyid: module:type/keyid, valid: Boolean}>}>}
+ * @return {Promise<{text: String, signatures: Array<{userId: String, valid: Boolean}>}>}
  *                              decrypted message as as native JavaScript string
  *                              with verified signatures or null if no literal data found
  * @static
