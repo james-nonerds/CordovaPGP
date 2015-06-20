@@ -1970,6 +1970,7 @@ parse_v4_sig(pgp_region_t *region, pgp_stream_t *stream)
 		fprintf(stderr, "*** ERROR: must set accumulate to 1\n");
 		return 0;
 	}
+    
 	(void) memcpy(pkt.u.sig.info.v4_hashed,
 	       stream->readinfo.accumulated + pkt.u.sig.v4_hashstart,
 	       pkt.u.sig.info.v4_hashlen);
@@ -2977,23 +2978,19 @@ decrypt_se_ip_data(pgp_content_enum tag, pgp_region_t *region,
 	return r;
 }
 
-/**
-   \ingroup Core_ReadPackets
-   \brief Read a Symmetrically Encrypted packet
-*/
-static int 
+static int
 parse_se_data(pgp_region_t *region, pgp_stream_t *stream)
 {
-	pgp_packet_t pkt;
-
-	/* there's no info to go with this, so just announce it */
-	CALLBACK(PGP_PTAG_CT_SE_DATA_HEADER, &stream->cbinfo, &pkt);
-
-	/*
-	 * The content of an encrypted data packet is more OpenPGP packets
-	 * once decrypted, so recursively handle them
-	 */
-	return decrypt_se_data(PGP_PTAG_CT_SE_DATA_BODY, region, stream);
+    pgp_packet_t pkt;
+    
+    /* there's no info to go with this, so just announce it */
+    CALLBACK(PGP_PTAG_CT_SE_DATA_HEADER, &stream->cbinfo, &pkt);
+    
+    /*
+     * The content of an encrypted data packet is more OpenPGP packets
+     * once decrypted, so recursively handle them
+     */
+    return decrypt_se_data(PGP_PTAG_CT_SE_DATA_BODY, region, stream);
 }
 
 /**
@@ -3028,6 +3025,36 @@ parse_se_ip_data(pgp_region_t *region, pgp_stream_t *stream)
 	 * once decrypted, so recursively handle them
 	 */
 	return decrypt_se_ip_data(PGP_PTAG_CT_SE_IP_DATA_BODY, region, stream);
+}
+
+static int
+parse_se_ip_data2(pgp_region_t *region, pgp_stream_t *stream)
+{
+    pgp_packet_t	pkt;
+    uint8_t		c = 0x0;
+    
+    if (!limread(&c, 1, region, stream)) {
+        return 0;
+    }
+    pkt.u.se_ip_data_header = c;
+    if (pgp_get_debug_level(__FILE__)) {
+        (void) fprintf(stderr, "parse_se_ip_data: data header %d\n", c);
+    }
+    if (pkt.u.se_ip_data_header != PGP_SE_IP_DATA_VERSION) {
+        (void) fprintf(stderr, "parse_se_ip_data: bad version\n");
+        return 0;
+    }
+    
+    if (pgp_get_debug_level(__FILE__)) {
+        (void) fprintf(stderr, "parse_se_ip_data: region %d,%d\n",
+                       region->readc, region->length);
+        hexdump(stderr, "compressed region", stream->virtualpkt, stream->virtualc);
+    }
+    /*
+     * The content of an encrypted data packet is more OpenPGP packets
+     * once decrypted, so recursively handle them
+     */
+    return decrypt_se_ip_data(PGP_PTAG_CT_SE_IP_DATA_BODY, region, stream);
 }
 
 /**
@@ -3165,7 +3192,7 @@ parse_packet(pgp_stream_t *stream, uint32_t *pktlen)
 		break;
 
 	case PGP_PTAG_CT_1_PASS_SIG:
-		ret = parse_one_pass(&region, stream);
+//		ret = parse_one_pass(&region, stream);
 		break;
 
 	case PGP_PTAG_CT_LITDATA:

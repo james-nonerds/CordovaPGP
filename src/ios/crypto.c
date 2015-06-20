@@ -47,6 +47,7 @@
  * limitations under the License.
  */
 #include "config.h"
+#include "netpgpsdk.h"
 
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
@@ -322,6 +323,15 @@ write_parsed_cb(const pgp_packet_t *pkt, pgp_cbdata_t *cbinfo)
 		/* They're handled in parse_packet() */
 		/* and nothing else needs to be done */
 		break;
+            
+    // These four are to add validation to decryption:
+    case PGP_PTAG_CT_1_PASS_SIG:
+    case PGP_PTAG_CT_SIGNATURE_HEADER:
+    case PGP_PTAG_CT_SIGNATURE:
+        break;
+            
+    case PGP_PTAG_CT_SIGNATURE_FOOTER:
+        return pgp_sig_cb(pkt, cbinfo);
 
 	default:
 		if (pgp_get_debug_level(__FILE__)) {
