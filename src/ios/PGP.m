@@ -203,14 +203,21 @@ static NSString *const PGPDefaultUsername = @"default-user";
     }
     
     NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
-    
     void *outbuf = calloc(maxsize, sizeof(Byte));
+    
+    if (outbuf == NULL) {
+        errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to calloc outbuf."]);
+        return;
+    }
+    
     int outsize = netpgp_decrypt_memory(self.netpgp, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
     
     if (outsize > 0) {
         completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
     } else {
         errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to decrypt."]);
+        free(outbuf);
+        outbuf = NULL;
     }
 }
 
@@ -232,12 +239,19 @@ static NSString *const PGPDefaultUsername = @"default-user";
     NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
     
     void *outbuf = calloc(maxsize, sizeof(Byte));
+    if (outbuf == NULL) {
+        errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to calloc outbuf."]);
+        return;
+    }
+    
     int outsize = netpgp_encrypt_memory_single(self.netpgp, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
     
     if (outsize > 0) {
         completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
     } else {
         errorBlock([PGP errorWithCause:@"PGP encryptData: Failed to encrypt."]);
+        free(outbuf);
+        outbuf = NULL;
     }
 }
 
@@ -261,12 +275,20 @@ static NSString *const PGPDefaultUsername = @"default-user";
     NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
     
     void *outbuf = calloc(maxsize, sizeof(Byte));
+    
+    if (outbuf == NULL) {
+        errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to calloc outbuf."]);
+        return;
+    }
+    
     int outsize = netpgp_encrypt_memory_multiple(self.netpgp, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
     
     if (outsize > 0) {
         completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
     } else {
         errorBlock([PGP errorWithCause:@"PGP encryptData (multiple): Failed to encrypt."]);
+        free(outbuf);
+        outbuf = NULL;
     }
 }
 
@@ -283,12 +305,19 @@ static NSString *const PGPDefaultUsername = @"default-user";
     NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
     
     void *outbuf = calloc(maxsize, sizeof(Byte));
+    
+    if (outbuf == NULL) {
+        return;
+    }
+    
     int outsize = netpgp_sign_memory(self.netpgp, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR, CLEARTEXT);
     
     if (outsize > 0) {
         completionBlock([NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES]);
     } else {
         errorBlock([PGP errorWithCause:@"Failed to encrypt."]);
+        free(outbuf);
+        outbuf = NULL;
     }
 }
 
@@ -333,6 +362,11 @@ static NSString *const PGPDefaultUsername = @"default-user";
     NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
     void *outbuf = calloc(maxsize, sizeof(Byte));
     
+    if (outbuf == NULL) {
+        errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to calloc outbuf."]);
+        return;
+    }
+    
     size_t validSignatureCount = 0;
     int outsize = netpgp_verify_memory(self.netpgp,
                                        data.bytes, data.length,
@@ -359,10 +393,17 @@ static NSString *const PGPDefaultUsername = @"default-user";
         resultKeyIds = NULL;
     }
     
-    NSData *outputData = [NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES];
-    NSString *outputMessage = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
-    
-    completionBlock(outputMessage, [NSArray arrayWithArray:verifiedKeyIds]);
+    if (outsize > 0) {
+        NSData *outputData = [NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES];
+        NSString *outputMessage = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
+        
+        completionBlock(outputMessage, [NSArray arrayWithArray:verifiedKeyIds]);
+    } else {
+        errorBlock([PGP errorWithCause:@"Failed to verify."]);
+        
+        free(outbuf);
+        outbuf = NULL;
+    }
 }
 
 #define KEY_ID_LENGTH 16
@@ -401,10 +442,16 @@ static NSString *const PGPDefaultUsername = @"default-user";
     NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
     
     void *outbuf = calloc(maxsize, sizeof(Byte));
+    
+    if (outbuf == NULL) {
+        errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to calloc outbuf."]);
+        return;
+    }
+    
     int outsize = netpgp_decrypt_memory(self.netpgp, (void *) data.bytes, data.length, outbuf, maxsize, SHOULD_ARMOR);
     
     if (outsize > 0) {
-        NSData *outputData = [NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:YES];
+        NSData *outputData = [NSData dataWithBytesNoCopy:outbuf length:outsize freeWhenDone:NO];
         NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
         
         if ([self isArmored:outputString]) {
@@ -418,7 +465,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
             memcpy(key_id, outbuf + message_size, KEY_ID_LENGTH);
             key_id[KEY_ID_LENGTH] = '\0';
             
-            NSData *messageData = [NSData dataWithBytesNoCopy:outbuf length:message_size freeWhenDone:NO];
+            NSData *messageData = [NSData dataWithBytes:outbuf length:message_size];
             NSString *userId = [self userIdForKeyId:key_id];
                         
             completionBlock([[NSString alloc] initWithData:messageData encoding:NSUTF8StringEncoding], @[userId]);
@@ -427,6 +474,9 @@ static NSString *const PGPDefaultUsername = @"default-user";
     } else {
         errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to decrypt."]);
     }
+    
+    free(outbuf);
+    outbuf = NULL;
 }
 
 - (NSString *)userIdForKeyId:(char *)key_id {
