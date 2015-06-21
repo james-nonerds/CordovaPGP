@@ -50,6 +50,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
 
 @property (nonatomic, strong) NSString *userId;
 
++ (dispatch_queue_t)queue;
 + (instancetype)pgp;
 + (NSError *)errorWithCause:(NSString *)cause;
 
@@ -68,6 +69,17 @@ static NSString *const PGPDefaultUsername = @"default-user";
 
 @implementation PGP
 
+static dispatch_queue_t _classQueue;
+
++ (dispatch_queue_t)queue {
+    static dispatch_once_t once_token;
+    
+    dispatch_once(&once_token, ^{
+        _classQueue = dispatch_queue_create("com.humanpractice.cordova.PGP.queue", DISPATCH_QUEUE_SERIAL);
+    });
+    
+    return _classQueue;
+}
 
 #pragma mark Constructors
 
@@ -129,7 +141,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
     self = [super init];
     
     if (self != nil) {
-        _queue = dispatch_queue_create("com.humanpractice.cordova.PGP.queue", DISPATCH_QUEUE_SERIAL);
+        _queue = [PGP queue];
         _uuid = [NSUUID UUID];
     }
     
