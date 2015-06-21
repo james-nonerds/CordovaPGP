@@ -161,7 +161,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
 - (void)generateKeysWithOptions:(NSDictionary *)options
                 completionBlock:(void(^)(NSString *publicKey, NSString *privateKey))completionBlock
                      errorBlock:(void(^)(NSError *error))errorBlock {
-    dispatch_async(self.queue, ^{
+    dispatch_sync(self.queue, ^{
         // Get the options out:
         NSNumber *keyType = options[PGPOptionKeyType] ? options[PGPOptionKeyType] : @(DEFAULT_KEY_TYPE);
         NSNumber *numBits = options[PGPOptionNumBits] ? options[PGPOptionNumBits] : @(DEFAULT_BIT_COUNT);
@@ -201,7 +201,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
     completionBlock:(void(^)(NSData *decryptedData))completionBlock
          errorBlock:(void(^)(NSError *error))errorBlock {
     
-    dispatch_async(self.queue, ^{
+    dispatch_sync(self.queue, ^{
         if (data == nil) {
             errorBlock([PGP errorWithCause:@"PGP decryptData: Data can not be nil."]);
             return;
@@ -234,7 +234,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
     completionBlock:(void(^)(NSData *encryptedData))completionBlock
          errorBlock:(void(^)(NSError *error))errorBlock {
     
-    dispatch_async(self.queue, ^{
+    dispatch_sync(self.queue, ^{
         if (data == nil || publicKey == nil) {
             errorBlock([PGP errorWithCause:@"PGP encryptData: Neither data nor publicKey can be nil."]);
             return;
@@ -271,7 +271,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
     completionBlock:(void(^)(NSData *encryptedData))completionBlock
          errorBlock:(void(^)(NSError *error))errorBlock {
     
-    dispatch_async(self.queue, ^{
+    dispatch_sync(self.queue, ^{
         
         if (data == nil || publicKeys == nil) {
             errorBlock([PGP errorWithCause:@"PGP encryptData: Neither data nor publicKeys can be nil."]);
@@ -311,7 +311,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
  completionBlock:(void (^)(NSData *))completionBlock
       errorBlock:(void (^)(NSError *))errorBlock {
     
-    dispatch_async(self.queue, ^{
+    dispatch_sync(self.queue, ^{
         
         if (data == nil) {
             errorBlock([PGP errorWithCause:@"PGP signData: data can not be nil."]);
@@ -345,7 +345,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
    completionBlock:(void (^)(NSString *, NSArray *))completionBlock
         errorBlock:(void (^)(NSError *))errorBlock {
     
-    dispatch_async(self.queue, ^{
+    dispatch_sync(self.queue, ^{
         if (data == nil || publicKeys == nil) {
             errorBlock([PGP errorWithCause:@"PGP verifyData: Neither data nor publicKeys can be nil."]);
             return;
@@ -370,60 +370,58 @@ static NSString *const PGPDefaultUsername = @"default-user";
           keyCount:(NSUInteger)keyCount
    completionBlock:(void (^)(NSString *, NSArray *))completionBlock errorBlock:(void (^)(NSError *))errorBlock {
     
-    dispatch_async(self.queue, ^{
-        // Silences analyzer warning:
-        NSUInteger count = keyCount;
-        char **resultKeyIds = calloc(count, sizeof(char *));
+    // Silences analyzer warning:
+    NSUInteger count = keyCount;
+    char **resultKeyIds = calloc(count, sizeof(char *));
+    
+    if (resultKeyIds == NULL) {
+        errorBlock([PGP errorWithCause:@"PGP verifyData: Failed to alloc key array."]);
+        return;
+    }
+    
+    NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
+    void *outbuf = calloc(maxsize, sizeof(Byte));
+    
+    if (outbuf == NULL) {
+        errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to calloc outbuf."]);
+        return;
+    }
+    
+    size_t validSignatureCount = 0;
+    int outsize = netpgp_verify_memory(self.netpgp,
+                                       data.bytes, data.length,
+                                       outbuf, maxsize,
+                                       resultKeyIds, &validSignatureCount,
+                                       0);
+    
+    NSMutableArray *verifiedKeyIds = [NSMutableArray array];
+    
+    for (int i = 0; i < validSignatureCount; i++) {
+        char *verifiedKeyId = resultKeyIds[i];
         
-        if (resultKeyIds == NULL) {
-            errorBlock([PGP errorWithCause:@"PGP verifyData: Failed to alloc key array."]);
-            return;
-        }
-        
-        NSInteger maxsize = [@DEFAULT_MEMORY_SIZE integerValue];
-        void *outbuf = calloc(maxsize, sizeof(Byte));
-        
-        if (outbuf == NULL) {
-            errorBlock([PGP errorWithCause:@"PGP decryptData: Failed to calloc outbuf."]);
-            return;
-        }
-        
-        size_t validSignatureCount = 0;
-        int outsize = netpgp_verify_memory(self.netpgp,
-                                           data.bytes, data.length,
-                                           outbuf, maxsize,
-                                           resultKeyIds, &validSignatureCount,
-                                           0);
-        
-        NSMutableArray *verifiedKeyIds = [NSMutableArray array];
-        
-        for (int i = 0; i < validSignatureCount; i++) {
-            char *verifiedKeyId = resultKeyIds[i];
+        if (verifiedKeyId) {
+            NSString *userId = [self userIdForKeyId:verifiedKeyId];
+            [verifiedKeyIds addObject:userId];
             
-            if (verifiedKeyId) {
-                NSString *userId = [self userIdForKeyId:verifiedKeyId];
-                [verifiedKeyIds addObject:userId];
-                
-                free(verifiedKeyId);
-                resultKeyIds[i] = NULL;
-            }
+            free(verifiedKeyId);
+            resultKeyIds[i] = NULL;
         }
-        
-        if (resultKeyIds) {
-            free(resultKeyIds);
-            resultKeyIds = NULL;
-        }
-        
-        if (outsize > 0) {
-            NSString *outputMessage = [[NSString alloc] initWithData:[NSData dataWithBytes:outbuf length:outsize] encoding:NSUTF8StringEncoding];
-            completionBlock(outputMessage, [NSArray arrayWithArray:verifiedKeyIds]);
-        } else {
-            errorBlock([PGP errorWithCause:@"Failed to verify."]);
-        }
-        
-        free(outbuf);
-        outbuf = NULL;
-    });
+    }
+    
+    if (resultKeyIds) {
+        free(resultKeyIds);
+        resultKeyIds = NULL;
+    }
+    
+    if (outsize > 0) {
+        NSString *outputMessage = [[NSString alloc] initWithData:[NSData dataWithBytes:outbuf length:outsize] encoding:NSUTF8StringEncoding];
+        completionBlock(outputMessage, [NSArray arrayWithArray:verifiedKeyIds]);
+    } else {
+        errorBlock([PGP errorWithCause:@"Failed to verify."]);
+    }
+    
+    free(outbuf);
+    outbuf = NULL;
 }
 
 #define KEY_ID_LENGTH 16
@@ -433,7 +431,7 @@ static NSString *const PGPDefaultUsername = @"default-user";
              completionBlock:(void (^)(NSString *, NSArray *))completionBlock
                   errorBlock:(void (^)(NSError *))errorBlock {
     
-    dispatch_async(self.queue, ^{
+    dispatch_sync(self.queue, ^{
         
         if (data == nil || publicKeys == nil) {
             errorBlock([PGP errorWithCause:@"PGP verifyData: Neither data nor publicKeys can be nil."]);
