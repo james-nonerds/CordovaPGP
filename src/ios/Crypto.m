@@ -289,6 +289,8 @@
     }
 }
 
+#define HASH_HEADER_LENGTH 19
+
 + (NSData *)emsaPKCSEncodeMessage:(NSData *)message algorithm:(HashAlgorithm)algorithm length:(NSUInteger)length {
     if (algorithm != HashAlgorithmSHA256) {
         return nil;
@@ -296,8 +298,7 @@
     
     Byte digest[SHA256_DIGEST_LENGTH];
     SHA256(message.bytes, message.length, digest);
-    
-    const NSUInteger HASH_HEADER_LENGTH = 19;
+
     Byte hashHeader[HASH_HEADER_LENGTH] = {
         0x30, 0x31, 0x30, 0x0d,
         0x06, 0x09, 0x60, 0x86,

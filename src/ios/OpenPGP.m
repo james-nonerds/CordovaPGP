@@ -157,12 +157,12 @@
 + (void)generateKeypairWithOptions:(NSDictionary *)options
                    completionBlock:(void(^)(NSString *publicKey, NSString *privateKey))completionBlock
                         errorBlock:(void(^)(NSError *error))errorBlock {
-    if (!options[@"bits"] || !options[@"userId"]) {
+    if (!options[@"numBits"] || !options[@"userId"]) {
         errorBlock([OpenPGP errorWithCause:@"Options needs bits and userId"]);
         return;
     }
     
-    NSNumber *bits = options[@"bits"];
+    NSNumber *bits = options[@"numBits"];
     NSString *userId = options[@"userId"];
     
     Keypair *keypair = [Crypto generateKeypairWithBits:bits.intValue];

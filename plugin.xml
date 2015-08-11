@@ -17,7 +17,6 @@
         </config-file>
         <header-file src="src/ios/CordovaPGP.h"/>
         <source-file src="src/ios/CordovaPGP.m"/>
-
         <header-file src="src/ios/ASCIIArmor.h"/>
         <source-file src="src/ios/ASCIIArmor.m"/>
         <header-file src="src/ios/Crypto.h"/>
