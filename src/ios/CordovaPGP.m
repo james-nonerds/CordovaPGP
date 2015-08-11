@@ -7,7 +7,7 @@
 //
 
 #import "CordovaPGP.h"
-#import "PGP.h"
+#import "OpenPGP.h"
 
 typedef void (^CordovaPGPErrorBlock)(NSError *);
 
@@ -40,8 +40,7 @@ typedef void (^CordovaPGPErrorBlock)(NSError *);
     [self.commandDelegate runInBackground:^{
         NSDictionary *options = [command.arguments objectAtIndex:0];
         
-        PGP *generator = [PGP keyGenerator];
-        [generator generateKeysWithOptions:options completionBlock:^(NSString *publicKey, NSString *privateKey) {
+        [OpenPGP generateKeypairWithOptions:options completionBlock:^(NSString *publicKey, NSString *privateKey) {
             
             NSDictionary *keys = @{@"privateKeyArmored": privateKey,
                                    @"publicKeyArmored": publicKey};
@@ -69,23 +68,12 @@ typedef void (^CordovaPGPErrorBlock)(NSError *);
         NSString *privateKey = [command.arguments objectAtIndex:1];
         NSString *text = [command.arguments objectAtIndex:2];
         
-        // Sign the text first:
-        PGP *signer = [PGP signerWithPrivateKey:privateKey];
-        [signer signData:[text dataUsingEncoding:NSUTF8StringEncoding] completionBlock:^(NSData *signedData) {
+        [OpenPGP signAndEncryptMessage:text privateKey:privateKey publicKeys:publicKeys completionBlock:^(NSString *encryptedMessage) {
             
-            // Signing was successful, now encrypt the text:
-            PGP *encryptor = [PGP encryptor];
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                              messageAsString:encryptedMessage];
             
-            [encryptor encryptData:signedData publicKeys:publicKeys completionBlock:^(NSData *encryptedData) {
-                
-                NSString *result = [[NSString alloc] initWithData:encryptedData encoding:NSUTF8StringEncoding];
-                
-                CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                                                  messageAsString:result];
-                
-                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-                
-            } errorBlock:errorBlock];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             
         } errorBlock:errorBlock];
     }];
@@ -105,24 +93,19 @@ typedef void (^CordovaPGPErrorBlock)(NSError *);
         NSArray *publicKeys = [command.arguments objectAtIndex:1];
         NSString *msg = [command.arguments objectAtIndex:2];
         
-        // Decrypt the data:
-        PGP *decryptor = [PGP decryptorWithPrivateKey:privateKey];
-
-        [decryptor decryptAndVerifyData:[msg dataUsingEncoding:NSUTF8StringEncoding] publicKeys:publicKeys completionBlock:^(NSString *decryptedMessage, NSArray *verifiedUserIds) {
+        [OpenPGP decryptAndVerifyMessage:msg privateKey:privateKey publicKeys:publicKeys completionBlock:^(NSString *decryptedMessage, NSArray *verifiedUserIds) {
             
-            NSMutableArray *verifiedSignatures = [NSMutableArray array];
+            NSArray *signatures = @[@{@"userId": verifiedUserIds.firstObject,
+                                      @"valid": @YES}];
             
-            for (NSString *userId in verifiedUserIds) {
-                [verifiedSignatures addObject:@{@"userId": userId, @"valid": @YES}];
-            }
-            
-            NSDictionary *result = @{@"text": decryptedMessage, @"signatures": [NSArray arrayWithArray:verifiedSignatures]};
+            NSDictionary *result = @{@"text": decryptedMessage,
+                                     @"signatures": signatures};
             
             CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                                           messageAsDictionary:result];
             
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        
+            
         } errorBlock:errorBlock];
     }];
 }
